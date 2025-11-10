@@ -47,6 +47,7 @@ export interface Database {
           org_id: string
           email: string
           full_name: string | null
+          avatar_url: string | null
           role: string
           created_at: string
           last_login_at: string | null
@@ -56,6 +57,7 @@ export interface Database {
           org_id: string
           email: string
           full_name?: string | null
+          avatar_url?: string | null
           role?: string
           created_at?: string
           last_login_at?: string | null
@@ -65,6 +67,7 @@ export interface Database {
           org_id?: string
           email?: string
           full_name?: string | null
+          avatar_url?: string | null
           role?: string
           created_at?: string
           last_login_at?: string | null
