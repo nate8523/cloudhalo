@@ -175,7 +175,7 @@ export async function PATCH(
     // Update tenant
     const { data: updatedTenant, error: updateError } = await supabase
       .from('azure_tenants')
-      .update(updateData)
+      .update(updateData as any)
       .eq('id', id)
       .select()
       .single()
