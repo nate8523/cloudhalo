@@ -1,47 +1,44 @@
+// src/app/api/tenants/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { encryptAzureClientSecret, decryptAzureClientSecret } from '@/lib/encryption/vault'
+import type { Database } from '@/lib/supabase/types'
 
-interface RouteContext {
-  params: Promise<{
-    id: string
-  }>
-}
+type AzureTenantRow = Database['public']['Tables']['azure_tenants']['Row']
+type AzureTenantUpdate = Database['public']['Tables']['azure_tenants']['Update']
+type UserRow = Database['public']['Tables']['users']['Row']
 
 /**
  * GET /api/tenants/[id]
  * Fetch a specific tenant's details with decrypted credentials
  */
 export async function GET(
-  request: NextRequest,
-  context: RouteContext
+  _request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await context.params
-    const supabase = await createClient()
+    const { id } = params
+    const supabase = await createClient<Database>()
 
     // Get authenticated user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get user's organization
-    const { data: userData } = await supabase
+    const { data: userData, error: userTableError } = await supabase
       .from('users')
       .select('org_id')
       .eq('id', user.id)
-      .single() as { data: { org_id: string } | null }
+      .single<UserRow>()
 
-    if (!userData?.org_id) {
-      return NextResponse.json(
-        { error: 'Organization not found' },
-        { status: 404 }
-      )
+    if (userTableError || !userData?.org_id) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
     // Fetch tenant with RLS protection
@@ -50,19 +47,19 @@ export async function GET(
       .select('*')
       .eq('id', id)
       .eq('org_id', userData.org_id)
-      .single() as { data: any | null, error: any }
+      .single<AzureTenantRow>()
 
     if (tenantError || !tenant) {
-      return NextResponse.json(
-        { error: 'Tenant not found or access denied' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Tenant not found or access denied' }, { status: 404 })
     }
 
     // Decrypt the client secret before returning
-    let decryptedSecret: string
     try {
-      decryptedSecret = await decryptAzureClientSecret(tenant.azure_client_secret)
+      const decryptedSecret = await decryptAzureClientSecret(tenant.azure_client_secret)
+      return NextResponse.json({
+        ...tenant,
+        azure_client_secret: decryptedSecret
+      })
     } catch (decryptError: any) {
       console.error('Failed to decrypt client secret:', decryptError)
       // Return tenant but mask the secret if decryption fails
@@ -71,16 +68,10 @@ export async function GET(
         azure_client_secret: '********' // Masked
       })
     }
-
-    return NextResponse.json({
-      ...tenant,
-      azure_client_secret: decryptedSecret
-    })
-
   } catch (error: any) {
     console.error('Fetch tenant error:', error)
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: error?.message ?? 'Internal server error' },
       { status: 500 }
     )
   }
@@ -92,49 +83,43 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await context.params
-    const supabase = await createClient()
+    const { id } = params
+    const supabase = await createClient<Database>()
 
     // Get authenticated user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: userError
+    } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get user's organization
-    const { data: userData } = await supabase
+    const { data: userData, error: userTableError } = await supabase
       .from('users')
       .select('org_id')
       .eq('id', user.id)
-      .single() as { data: { org_id: string } | null }
+      .single<UserRow>()
 
-    if (!userData?.org_id) {
-      return NextResponse.json(
-        { error: 'Organization not found' },
-        { status: 404 }
-      )
+    if (userTableError || !userData?.org_id) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    // Fetch existing tenant to verify ownership
+    // Fetch existing tenant to verify ownership (and to get the current name if needed)
     const { data: existingTenant, error: tenantError } = await supabase
       .from('azure_tenants')
       .select('*')
       .eq('id', id)
       .eq('org_id', userData.org_id)
-      .single() as { data: any | null, error: any }
+      .single<AzureTenantRow>()
 
     if (tenantError || !existingTenant) {
-      return NextResponse.json(
-        { error: 'Tenant not found or access denied' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Tenant not found or access denied' }, { status: 404 })
     }
 
     // Parse request body
@@ -145,23 +130,27 @@ export async function PATCH(
       azure_app_id,
       azure_client_secret,
       credentials_expire_at
-    } = body
+    }: Partial<AzureTenantRow> & {
+      azure_client_secret?: string
+    } = body ?? {}
 
-    // Prepare update data
-    const updateData: Record<string, any> = {
+    // Prepare update data as the table's Update type
+    const updateData: AzureTenantUpdate = {
+      // only set fields that were provided to avoid overwriting with undefined
+      ...(name !== undefined ? { name } : {}),
+      ...(azure_tenant_id !== undefined ? { azure_tenant_id } : {}),
+      ...(azure_app_id !== undefined ? { azure_app_id } : {}),
+      ...(credentials_expire_at !== undefined ? { credentials_expire_at } : {}),
       updated_at: new Date().toISOString()
     }
 
-    if (name !== undefined) updateData.name = name
-    if (azure_tenant_id !== undefined) updateData.azure_tenant_id = azure_tenant_id
-    if (azure_app_id !== undefined) updateData.azure_app_id = azure_app_id
-    if (credentials_expire_at !== undefined) updateData.credentials_expire_at = credentials_expire_at
-
-    // Handle client secret encryption if provided
+    // Handle client secret encryption if provided (non-empty string)
     if (azure_client_secret !== undefined && azure_client_secret !== '') {
       try {
-        // Encrypt the new client secret
-        const encryptedSecret = await encryptAzureClientSecret(azure_client_secret, name || existingTenant.name)
+        const encryptedSecret = await encryptAzureClientSecret(
+          azure_client_secret,
+          name ?? existingTenant.name
+        )
         updateData.azure_client_secret = encryptedSecret
       } catch (encryptError: any) {
         console.error('Failed to encrypt client secret:', encryptError)
@@ -172,35 +161,31 @@ export async function PATCH(
       }
     }
 
-    // Update tenant
-    // @ts-ignore - Dynamic update object requires type assertion
+    // Update tenant — note the typed payload prevents the "never" error
     const { data: updatedTenant, error: updateError } = await supabase
       .from('azure_tenants')
-      .update(updateData)
+      .update(updateData) // <-- typed as AzureTenantUpdate
       .eq('id', id)
-      .select()
-      .single()
+      .select('*')
+      .single<AzureTenantRow>()
 
-    if (updateError) {
+    if (updateError || !updatedTenant) {
       console.error('Failed to update tenant:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to update tenant' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Failed to update tenant' }, { status: 500 })
     }
 
     // Return updated tenant without exposing the encrypted secret
-    const { azure_client_secret: _, ...tenantResponse } = updatedTenant
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { azure_client_secret: _secret, ...tenantResponse } = updatedTenant
 
     return NextResponse.json({
       success: true,
       tenant: tenantResponse
     })
-
   } catch (error: any) {
     console.error('Update tenant error:', error)
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: error?.message ?? 'Internal server error' },
       { status: 500 }
     )
   }
