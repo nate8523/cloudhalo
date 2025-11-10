@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { encryptAzureClientSecret, decryptAzureClientSecret } from '@/lib/encryption/vault'
+import type { Database } from '@/types/database'
 
 interface RouteContext {
   params: Promise<{
@@ -148,14 +149,7 @@ export async function PATCH(
     } = body
 
     // Prepare update data
-    interface TenantUpdateData {
-      updated_at: string
-      name?: string
-      azure_tenant_id?: string
-      azure_app_id?: string
-      credentials_expire_at?: string
-      azure_client_secret?: string
-    }
+    type TenantUpdateData = Database['public']['Tables']['azure_tenants']['Update']
 
     const updateData: TenantUpdateData = {
       updated_at: new Date().toISOString()
