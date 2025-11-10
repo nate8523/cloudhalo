@@ -148,7 +148,16 @@ export async function PATCH(
     } = body
 
     // Prepare update data
-    const updateData: any = {
+    interface TenantUpdateData {
+      updated_at: string
+      name?: string
+      azure_tenant_id?: string
+      azure_app_id?: string
+      credentials_expire_at?: string
+      azure_client_secret?: string
+    }
+
+    const updateData: TenantUpdateData = {
       updated_at: new Date().toISOString()
     }
 
