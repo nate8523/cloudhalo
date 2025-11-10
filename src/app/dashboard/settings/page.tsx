@@ -15,56 +15,271 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { User, Mail, Lock, Trash2, Upload, Camera } from 'lucide-react'
-import { useState } from 'react'
+import { User, Mail, Lock, Trash2, Upload, Camera, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+
+interface UserProfile {
+  id: string
+  email: string
+  full_name: string | null
+  avatar_url: string | null
+  role: string
+  org_id: string
+}
 
 export default function SettingsPage() {
-  const [name, setName] = useState('John Doe')
-  const [email, setEmail] = useState('john.doe@example.com')
+  const router = useRouter()
+  const supabase = createClient()
+
+  const [loading, setLoading] = useState(true)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
+
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [avatarUrl, setAvatarUrl] = useState('')
+
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [accountDeleting, setAccountDeleting] = useState(false)
+
+  const [profileError, setProfileError] = useState('')
+  const [profileSuccess, setProfileSuccess] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSuccess, setPasswordSuccess] = useState('')
+  const [avatarError, setAvatarError] = useState('')
+
+  useEffect(() => {
+    loadProfile()
+  }, [])
+
+  const loadProfile = async () => {
+    try {
+      const response = await fetch('/api/user/profile')
+      if (!response.ok) {
+        throw new Error('Failed to load profile')
+      }
+
+      const data: UserProfile = await response.json()
+      setProfile(data)
+      setName(data.full_name || '')
+      setEmail(data.email || '')
+      setAvatarUrl(data.avatar_url || '')
+    } catch (error) {
+      console.error('Error loading profile:', error)
+      setProfileError('Failed to load profile')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement profile update logic with Supabase
-    console.log('Updating profile:', { name, email })
+    setProfileSaving(true)
+    setProfileError('')
+    setProfileSuccess('')
+
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: name,
+          email: email,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update profile')
+      }
+
+      const updatedProfile = await response.json()
+      setProfile(updatedProfile)
+      setProfileSuccess('Profile updated successfully!')
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setProfileSuccess(''), 3000)
+    } catch (error: any) {
+      console.error('Error updating profile:', error)
+      setProfileError(error.message || 'Failed to update profile')
+    } finally {
+      setProfileSaving(false)
+    }
   }
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
+    setPasswordError('')
+    setPasswordSuccess('')
+
     if (newPassword !== confirmPassword) {
-      alert('Passwords do not match')
+      setPasswordError('Passwords do not match')
       return
     }
-    // TODO: Implement password change logic with Supabase
-    console.log('Changing password')
+
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters')
+      return
+    }
+
+    setPasswordSaving(true)
+
+    try {
+      const response = await fetch('/api/user/password', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to change password')
+      }
+
+      setPasswordSuccess('Password changed successfully!')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setPasswordSuccess(''), 3000)
+    } catch (error: any) {
+      console.error('Error changing password:', error)
+      setPasswordError(error.message || 'Failed to change password')
+    } finally {
+      setPasswordSaving(false)
+    }
   }
 
   const handleDeleteAccount = async () => {
-    // TODO: Implement account deletion logic with Supabase
-    console.log('Deleting account')
-    setDeleteDialogOpen(false)
+    setAccountDeleting(true)
+
+    try {
+      const response = await fetch('/api/user/account', {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to delete account')
+      }
+
+      // Sign out and redirect to login
+      await supabase.auth.signOut()
+      router.push('/login')
+    } catch (error: any) {
+      console.error('Error deleting account:', error)
+      alert(error.message || 'Failed to delete account')
+    } finally {
+      setAccountDeleting(false)
+      setDeleteDialogOpen(false)
+    }
   }
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      // TODO: Upload to Supabase Storage and update avatar URL
-      const url = URL.createObjectURL(file)
-      setAvatarUrl(url)
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setAvatarError('Please select an image file')
+      return
+    }
+
+    // Validate file size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setAvatarError('File size must be less than 2MB')
+      return
+    }
+
+    setAvatarUploading(true)
+    setAvatarError('')
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/user/avatar', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to upload avatar')
+      }
+
+      const data = await response.json()
+      setAvatarUrl(data.avatar_url)
+
+      // Update profile state
+      if (profile) {
+        setProfile({ ...profile, avatar_url: data.avatar_url })
+      }
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error)
+      setAvatarError(error.message || 'Failed to upload avatar')
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
+  const handleRemoveAvatar = async () => {
+    setAvatarUploading(true)
+    setAvatarError('')
+
+    try {
+      const response = await fetch('/api/user/avatar', {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to remove avatar')
+      }
+
+      setAvatarUrl('')
+
+      // Update profile state
+      if (profile) {
+        setProfile({ ...profile, avatar_url: null })
+      }
+    } catch (error: any) {
+      console.error('Error removing avatar:', error)
+      setAvatarError(error.message || 'Failed to remove avatar')
+    } finally {
+      setAvatarUploading(false)
     }
   }
 
   const getInitials = (name: string) => {
+    if (!name) return 'U'
     return name
       .split(' ')
       .map(part => part[0])
       .join('')
       .toUpperCase()
       .slice(0, 2)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
@@ -86,6 +301,20 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleProfileUpdate} className="space-y-6">
+            {/* Success/Error Messages */}
+            {profileSuccess && (
+              <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                <p className="text-sm text-green-600 dark:text-green-500">
+                  {profileSuccess}
+                </p>
+              </div>
+            )}
+            {profileError && (
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="text-sm text-destructive">{profileError}</p>
+              </div>
+            )}
+
             {/* Avatar Upload */}
             <div className="flex items-center gap-6">
               <div className="relative group">
@@ -95,18 +324,26 @@ export default function SettingsPage() {
                     {getInitials(name)}
                   </AvatarFallback>
                 </Avatar>
-                <label
-                  htmlFor="avatar-upload"
-                  className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                >
-                  <Camera className="h-6 w-6 text-white" />
-                </label>
+                {!avatarUploading && (
+                  <label
+                    htmlFor="avatar-upload"
+                    className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    <Camera className="h-6 w-6 text-white" />
+                  </label>
+                )}
+                {avatarUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  </div>
+                )}
                 <input
                   id="avatar-upload"
                   type="file"
                   accept="image/*"
                   className="hidden"
                   onChange={handleAvatarUpload}
+                  disabled={avatarUploading}
                 />
               </div>
               <div className="space-y-2">
@@ -116,6 +353,7 @@ export default function SettingsPage() {
                     size="sm"
                     variant="outline"
                     onClick={() => document.getElementById('avatar-upload')?.click()}
+                    disabled={avatarUploading}
                   >
                     <Upload className="h-4 w-4 mr-2" />
                     Upload photo
@@ -125,7 +363,8 @@ export default function SettingsPage() {
                       type="button"
                       size="sm"
                       variant="ghost"
-                      onClick={() => setAvatarUrl('')}
+                      onClick={handleRemoveAvatar}
+                      disabled={avatarUploading}
                     >
                       Remove
                     </Button>
@@ -134,6 +373,9 @@ export default function SettingsPage() {
                 <p className="text-body-sm text-muted-foreground">
                   JPG, PNG or GIF. Max 2MB.
                 </p>
+                {avatarError && (
+                  <p className="text-body-sm text-destructive">{avatarError}</p>
+                )}
               </div>
             </div>
 
@@ -175,13 +417,27 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex gap-3">
-              <Button type="submit">
-                Save Changes
+              <Button type="submit" disabled={profileSaving}>
+                {profileSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
               </Button>
-              <Button type="button" variant="outline" onClick={() => {
-                setName('John Doe')
-                setEmail('john.doe@example.com')
-              }}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setName(profile?.full_name || '')
+                  setEmail(profile?.email || '')
+                  setProfileError('')
+                  setProfileSuccess('')
+                }}
+                disabled={profileSaving}
+              >
                 Cancel
               </Button>
             </div>
@@ -199,6 +455,20 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordChange} className="space-y-4">
+            {/* Success/Error Messages */}
+            {passwordSuccess && (
+              <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                <p className="text-sm text-green-600 dark:text-green-500">
+                  {passwordSuccess}
+                </p>
+              </div>
+            )}
+            {passwordError && (
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="text-sm text-destructive">{passwordError}</p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="current-password" className="flex items-center gap-2">
                 <Lock className="h-4 w-4" />
@@ -211,6 +481,7 @@ export default function SettingsPage() {
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Enter current password"
                 className="max-w-md"
+                required
               />
             </div>
 
@@ -223,6 +494,7 @@ export default function SettingsPage() {
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Enter new password"
                 className="max-w-md"
+                required
               />
             </div>
 
@@ -235,11 +507,19 @@ export default function SettingsPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm new password"
                 className="max-w-md"
+                required
               />
             </div>
 
-            <Button type="submit">
-              Update Password
+            <Button type="submit" disabled={passwordSaving}>
+              {passwordSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update Password'
+              )}
             </Button>
           </form>
         </CardContent>
@@ -272,6 +552,7 @@ export default function SettingsPage() {
                   variant="destructive"
                   size="sm"
                   className="bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white"
+                  disabled={accountDeleting}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Account
@@ -299,11 +580,26 @@ export default function SettingsPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="gap-2 sm:gap-0">
-                  <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteDialogOpen(false)}
+                    disabled={accountDeleting}
+                  >
                     Cancel
                   </Button>
-                  <Button variant="destructive" onClick={handleDeleteAccount}>
-                    Yes, delete my account
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteAccount}
+                    disabled={accountDeleting}
+                  >
+                    {accountDeleting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      'Yes, delete my account'
+                    )}
                   </Button>
                 </DialogFooter>
               </DialogContent>
