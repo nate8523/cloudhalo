@@ -147,22 +147,12 @@ export async function PATCH(
       credentials_expire_at
     } = body
 
-    // Prepare update data - build object dynamically based on provided fields
-    const updateFields: Record<string, any> = {
-      updated_at: new Date().toISOString()
-    }
-
-    if (name !== undefined) updateFields.name = name
-    if (azure_tenant_id !== undefined) updateFields.azure_tenant_id = azure_tenant_id
-    if (azure_app_id !== undefined) updateFields.azure_app_id = azure_app_id
-    if (credentials_expire_at !== undefined) updateFields.credentials_expire_at = credentials_expire_at
-
     // Handle client secret encryption if provided
+    let encryptedSecret: string | undefined
     if (azure_client_secret !== undefined && azure_client_secret !== '') {
       try {
         // Encrypt the new client secret
-        const encryptedSecret = await encryptAzureClientSecret(azure_client_secret, name || existingTenant.name)
-        updateFields.azure_client_secret = encryptedSecret
+        encryptedSecret = await encryptAzureClientSecret(azure_client_secret, name || existingTenant.name)
       } catch (encryptError: any) {
         console.error('Failed to encrypt client secret:', encryptError)
         return NextResponse.json(
@@ -170,6 +160,16 @@ export async function PATCH(
           { status: 500 }
         )
       }
+    }
+
+    // Prepare update data - build object dynamically based on provided fields
+    const updateFields = {
+      updated_at: new Date().toISOString(),
+      ...(name !== undefined && { name }),
+      ...(azure_tenant_id !== undefined && { azure_tenant_id }),
+      ...(azure_app_id !== undefined && { azure_app_id }),
+      ...(credentials_expire_at !== undefined && { credentials_expire_at }),
+      ...(encryptedSecret !== undefined && { azure_client_secret: encryptedSecret })
     }
 
     // Update tenant
