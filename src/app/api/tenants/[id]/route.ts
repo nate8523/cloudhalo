@@ -173,7 +173,6 @@ export async function PATCH(
     }
 
     // Update tenant
-    // @ts-expect-error - Supabase type inference issue with dynamic update objects
     const { data: updatedTenant, error: updateError } = await supabase
       .from('azure_tenants')
       .update(updateFields)
