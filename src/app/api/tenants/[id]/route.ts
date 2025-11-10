@@ -162,23 +162,23 @@ export async function PATCH(
       }
     }
 
-    // Prepare update data - build object dynamically based on provided fields
-    const updateFields = {
-      updated_at: new Date().toISOString(),
-      ...(name !== undefined && { name }),
-      ...(azure_tenant_id !== undefined && { azure_tenant_id }),
-      ...(azure_app_id !== undefined && { azure_app_id }),
-      ...(credentials_expire_at !== undefined && { credentials_expire_at }),
-      ...(encryptedSecret !== undefined && { azure_client_secret: encryptedSecret })
-    }
-
-    // Update tenant
-    const { data: updatedTenant, error: updateError } = await supabase
+    // Build update query dynamically
+    let updateQuery = supabase
       .from('azure_tenants')
-      .update(updateFields)
+      .update({
+        updated_at: new Date().toISOString(),
+        ...(name !== undefined && { name }),
+        ...(azure_tenant_id !== undefined && { azure_tenant_id }),
+        ...(azure_app_id !== undefined && { azure_app_id }),
+        ...(credentials_expire_at !== undefined && { credentials_expire_at }),
+        ...(encryptedSecret !== undefined && { azure_client_secret: encryptedSecret })
+      } as any)
       .eq('id', id)
       .select()
       .single()
+
+    // Update tenant
+    const { data: updatedTenant, error: updateError } = await updateQuery
 
     if (updateError) {
       console.error('Failed to update tenant:', updateError)
