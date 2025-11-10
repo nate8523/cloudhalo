@@ -76,11 +76,11 @@ export function DashboardSidebar({ onCollapseChange }: DashboardSidebarProps) {
         collapsed ? "lg:w-20" : "lg:w-64"
       )}
     >
-      <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-gradient-to-b from-[#0078D4] to-[#004578] px-6 pb-4 relative shadow-[var(--shadow-16dp)]">
+      <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-gradient-to-b from-[#0078D4] to-[#004578] dark:from-[#1a1a1a] dark:to-[#0a0a0a] dark:border-r dark:border-border px-6 pb-4 relative shadow-[var(--shadow-16dp)]">
         {/* Collapse/Expand Toggle Button */}
         <button
           onClick={handleToggle}
-          className="absolute top-4 right-2 z-10 p-1.5 rounded-md bg-white/20 hover:bg-white/30 text-white transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white/50"
+          className="absolute top-4 right-2 z-10 p-1.5 rounded-md bg-white/20 hover:bg-white/30 dark:bg-white/10 dark:hover:bg-white/20 text-white transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white/50 dark:focus:ring-primary/50"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
@@ -109,7 +109,7 @@ export function DashboardSidebar({ onCollapseChange }: DashboardSidebarProps) {
               <Link href="/dashboard/tenants/new">
                 <Button
                   className={cn(
-                    "w-full bg-white hover:bg-white/90 text-primary font-semibold shadow-[var(--shadow-8dp)] hover:shadow-[var(--shadow-16dp)] transition-all",
+                    "w-full bg-white hover:bg-white/90 dark:bg-primary dark:hover:bg-primary/90 text-primary dark:text-white font-semibold shadow-[var(--shadow-8dp)] hover:shadow-[var(--shadow-16dp)] transition-all",
                     collapsed && "px-2"
                   )}
                   size="sm"
@@ -169,7 +169,7 @@ export function DashboardSidebar({ onCollapseChange }: DashboardSidebarProps) {
               </ul>
             </li>
             <li className="mt-auto">
-              <Separator className="mb-4 bg-white/20" />
+              <Separator className="mb-4 bg-white/20 dark:bg-white/10" />
               {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
