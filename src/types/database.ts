@@ -79,6 +79,7 @@ export interface Database {
           azure_app_id: string
           azure_client_secret: string
           connection_status: string
+          connection_error: string | null
           credentials_expire_at: string | null
           last_sync_at: string | null
           created_at: string
@@ -92,6 +93,7 @@ export interface Database {
           azure_app_id: string
           azure_client_secret: string
           connection_status?: string
+          connection_error?: string | null
           credentials_expire_at?: string | null
           last_sync_at?: string | null
           created_at?: string
@@ -105,6 +107,7 @@ export interface Database {
           azure_app_id?: string
           azure_client_secret?: string
           connection_status?: string
+          connection_error?: string | null
           credentials_expire_at?: string | null
           last_sync_at?: string | null
           created_at?: string
