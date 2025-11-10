@@ -76,7 +76,7 @@ export function DashboardSidebar({ onCollapseChange }: DashboardSidebarProps) {
         collapsed ? "lg:w-20" : "lg:w-64"
       )}
     >
-      <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-gradient-to-b from-[#0078D4] to-[#004578] dark:from-[#1a1a1a] dark:to-[#0a0a0a] dark:border-r dark:border-border px-6 pb-4 relative shadow-[var(--shadow-16dp)]">
+      <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-gradient-to-br from-blue-600 via-cyan-600 to-blue-700 px-6 pb-4 relative shadow-[var(--shadow-16dp)]">
         {/* Collapse/Expand Toggle Button */}
         <button
           onClick={handleToggle}
