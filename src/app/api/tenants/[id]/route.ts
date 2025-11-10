@@ -148,7 +148,7 @@ export async function PATCH(
     } = body
 
     // Prepare update data
-    const updateData: any = {
+    const updateData: Record<string, any> = {
       updated_at: new Date().toISOString()
     }
 
