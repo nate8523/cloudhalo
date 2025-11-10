@@ -4,9 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/ui/button'
-import { Input } from '@/ui/input'
-import { Label } from '@/ui/label'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Cloud, TrendingDown, Bell, Shield, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
