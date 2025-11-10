@@ -173,9 +173,10 @@ export async function PATCH(
     }
 
     // Update tenant
+    // @ts-ignore - Dynamic update object requires type assertion
     const { data: updatedTenant, error: updateError } = await supabase
       .from('azure_tenants')
-      .update(updateData as any)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()
