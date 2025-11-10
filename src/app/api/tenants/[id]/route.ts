@@ -149,9 +149,7 @@ export async function PATCH(
     } = body
 
     // Prepare update data
-    type TenantUpdateData = Database['public']['Tables']['azure_tenants']['Update']
-
-    const updateData: TenantUpdateData = {
+    const updateData: Record<string, any> = {
       updated_at: new Date().toISOString()
     }
 
@@ -178,7 +176,7 @@ export async function PATCH(
     // Update tenant
     const { data: updatedTenant, error: updateError } = await supabase
       .from('azure_tenants')
-      .update(updateData as Database['public']['Tables']['azure_tenants']['Update'])
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()
