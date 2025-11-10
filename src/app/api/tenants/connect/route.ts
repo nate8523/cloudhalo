@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('org_id')
       .eq('id', user.id)
-      .single()
+      .single() as { data: { org_id: string } | null, error: any }
 
     if (userError || !userData) {
       console.error('User organization lookup failed:', {
@@ -154,9 +154,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert tenant into database with encrypted secret
-    const { data: tenant, error: insertError } = await supabase
+    const { data: tenant, error: insertError } = await (supabase
       .from('azure_tenants')
-      .insert({
+      .insert as any)({
         org_id: userData.org_id,
         name,
         azure_tenant_id: azureTenantId,

@@ -32,7 +32,7 @@ export async function POST(
       .from('users')
       .select('org_id')
       .eq('id', user.id)
-      .single()
+      .single() as { data: { org_id: string } | null }
 
     if (!userData?.org_id) {
       return NextResponse.json(
@@ -47,7 +47,7 @@ export async function POST(
       .select('*')
       .eq('id', id)
       .eq('org_id', userData.org_id)
-      .single()
+      .single() as { data: any | null, error: any }
 
     if (tenantError || !tenant) {
       return NextResponse.json(
@@ -122,9 +122,9 @@ export async function POST(
       }))
 
       // Update tenant status
-      const { error: updateError } = await supabase
+      const { error: updateError } = await (supabase
         .from('azure_tenants')
-        .update({
+        .update as any)({
           connection_status: 'connected',
           connection_error: null,
           last_sync_at: new Date().toISOString()
@@ -138,9 +138,9 @@ export async function POST(
       // Upsert subscriptions
       if (subscriptions.length > 0) {
         for (const sub of subscriptions) {
-          const { error: upsertError } = await supabase
+          const { error: upsertError } = await (supabase
             .from('azure_subscriptions')
-            .upsert(
+            .upsert as any)(
               {
                 tenant_id: id,
                 subscription_id: sub.subscription_id,
@@ -197,9 +197,9 @@ export async function POST(
       }
 
       // Update tenant with error status
-      await supabase
+      await (supabase
         .from('azure_tenants')
-        .update({
+        .update as any)({
           connection_status: 'failed',
           connection_error: errorMessage
         })

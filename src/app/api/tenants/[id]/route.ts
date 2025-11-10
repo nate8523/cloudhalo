@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { encryptAzureClientSecret, decryptAzureClientSecret } from '@/lib/encryption/vault'
+import type { Database } from '@/types/database'
 
 interface RouteContext {
   params: Promise<{
@@ -144,25 +145,23 @@ export async function PATCH(
       azure_tenant_id,
       azure_app_id,
       azure_client_secret,
-      credentials_expire_at
     } = body
 
-    // Prepare update data
-    const updateData: any = {
+    // Build update object dynamically
+    const updates: Record<string, any> = {
       updated_at: new Date().toISOString()
     }
 
-    if (name !== undefined) updateData.name = name
-    if (azure_tenant_id !== undefined) updateData.azure_tenant_id = azure_tenant_id
-    if (azure_app_id !== undefined) updateData.azure_app_id = azure_app_id
-    if (credentials_expire_at !== undefined) updateData.credentials_expire_at = credentials_expire_at
+    if (name !== undefined) updates.name = name
+    if (azure_tenant_id !== undefined) updates.azure_tenant_id = azure_tenant_id
+    if (azure_app_id !== undefined) updates.azure_app_id = azure_app_id
 
     // Handle client secret encryption if provided
     if (azure_client_secret !== undefined && azure_client_secret !== '') {
       try {
         // Encrypt the new client secret
         const encryptedSecret = await encryptAzureClientSecret(azure_client_secret, name || existingTenant.name)
-        updateData.azure_client_secret = encryptedSecret
+        updates.azure_client_secret = encryptedSecret
       } catch (encryptError: any) {
         console.error('Failed to encrypt client secret:', encryptError)
         return NextResponse.json(
@@ -172,10 +171,10 @@ export async function PATCH(
       }
     }
 
-    // Update tenant
-    const { data: updatedTenant, error: updateError } = await supabase
+    // Update tenant - cast to any to work around Supabase TypeScript strict mode issues
+    const { data: updatedTenant, error: updateError } = await (supabase
       .from('azure_tenants')
-      .update(updateData)
+      .update as any)(updates)
       .eq('id', id)
       .select()
       .single()

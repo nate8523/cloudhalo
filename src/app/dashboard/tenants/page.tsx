@@ -18,7 +18,7 @@ export default async function TenantsPage() {
       .from('users')
       .select('org_id')
       .eq('id', user.id)
-      .single()
+      .single() as { data: { org_id: string } | null }
 
     if (userData?.org_id) {
       // Fetch tenants for this organization

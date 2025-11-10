@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       .from('azure_tenants')
       .select('*')
       .eq('id', tenantId)
-      .single()
+      .single() as { data: any | null, error: any }
 
     if (tenantError || !tenant) {
       return NextResponse.json(
@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
     const discoveredSubscriptions = []
 
     try {
+      // @ts-ignore - Azure SDK type definitions may be incomplete
       for await (const subscription of subscriptionClient.subscriptions.list()) {
         discoveredSubscriptions.push({
           subscription_id: subscription.subscriptionId!,
@@ -100,9 +101,9 @@ export async function POST(request: NextRequest) {
       console.error('Failed to discover subscriptions:', error)
 
       // Update tenant status to failed
-      await supabase
+      await (supabase
         .from('azure_tenants')
-        .update({
+        .update as any)({
           connection_status: 'failed',
           connection_error: 'Failed to discover subscriptions. Please verify credentials and permissions.'
         })
@@ -116,9 +117,9 @@ export async function POST(request: NextRequest) {
 
     if (discoveredSubscriptions.length === 0) {
       // Update tenant status
-      await supabase
+      await (supabase
         .from('azure_tenants')
-        .update({
+        .update as any)({
           connection_status: 'failed',
           connection_error: 'No subscriptions found. Service principal may not have access.'
         })
@@ -139,9 +140,9 @@ export async function POST(request: NextRequest) {
     }))
 
     // Use upsert to handle re-discovery (update existing subscriptions)
-    const { data: insertedSubscriptions, error: insertError } = await supabase
+    const { data: insertedSubscriptions, error: insertError } = await (supabase
       .from('azure_subscriptions')
-      .upsert(subscriptionsToInsert, {
+      .upsert as any)(subscriptionsToInsert, {
         onConflict: 'subscription_id',
         ignoreDuplicates: false
       })
@@ -156,9 +157,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Update tenant last sync time and status
-    await supabase
+    await (supabase
       .from('azure_tenants')
-      .update({
+      .update as any)({
         connection_status: 'connected',
         connection_error: null,
         last_sync_at: new Date().toISOString()

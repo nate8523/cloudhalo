@@ -29,7 +29,7 @@ export default async function TenantDetailsPage({ params }: TenantDetailsPagePro
     .from('users')
     .select('org_id')
     .eq('id', user.id)
-    .single()
+    .single() as { data: { org_id: string } | null }
 
   if (!userData?.org_id) {
     notFound()
@@ -41,7 +41,7 @@ export default async function TenantDetailsPage({ params }: TenantDetailsPagePro
     .select('*')
     .eq('id', id)
     .eq('org_id', userData.org_id)
-    .single()
+    .single() as { data: any | null, error: any }
 
   if (error || !tenant) {
     notFound()
@@ -52,7 +52,7 @@ export default async function TenantDetailsPage({ params }: TenantDetailsPagePro
     .from('azure_subscriptions')
     .select('*')
     .eq('tenant_id', id)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false }) as { data: any[] | null }
 
   const subscriptionCount = subscriptions?.length || 0
   const enabledCount = subscriptions?.filter(s => s.state === 'Enabled').length || 0

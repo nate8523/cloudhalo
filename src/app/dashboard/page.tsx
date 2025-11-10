@@ -19,7 +19,7 @@ export default async function DashboardPage() {
       .from('users')
       .select('org_id')
       .eq('id', user.id)
-      .single()
+      .single() as { data: { org_id: string } | null }
 
     if (userData?.org_id) {
       // Count tenants for this organization
