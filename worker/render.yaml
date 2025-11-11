@@ -1,7 +1,7 @@
 services:
   - type: web  # Use 'web' type for free tier (workers not available on free)
     name: cloudhalo-worker
-    env: node
+    runtime: node
     region: oregon
     plan: free  # FREE tier - Change to 'starter' ($7/mo) when ready to scale
     buildCommand: npm install && npm run build

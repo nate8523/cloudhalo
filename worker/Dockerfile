@@ -9,9 +9,9 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.json ./
 
-# Install dependencies
-RUN npm ci --only=production && \
-    npm install -D typescript tsx @types/node
+# Install dependencies (use npm install instead of npm ci for flexibility)
+RUN npm install --production=false && \
+    npm cache clean --force
 
 # Copy source code
 COPY src ./src
@@ -28,7 +28,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install production dependencies only
-RUN npm ci --only=production && \
+RUN npm install --production && \
     npm cache clean --force
 
 # Copy built application from builder
@@ -41,10 +41,10 @@ RUN addgroup -g 1001 -S nodejs && \
 USER nodejs
 
 # Expose health check port
-EXPOSE 3001
+EXPOSE 10000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"
+  CMD node -e "require('http').get('http://localhost:10000/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"
 
 CMD ["node", "dist/index.js"]
