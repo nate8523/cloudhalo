@@ -456,6 +456,248 @@ export interface Database {
           updated_at?: string
         }
       }
+      report_configurations: {
+        Row: {
+          id: string
+          org_id: string
+          name: string
+          description: string | null
+          schedule_type: 'daily' | 'weekly' | 'monthly' | 'quarterly'
+          schedule_day_of_week: number | null
+          schedule_day_of_month: number | null
+          schedule_time: string
+          tenant_ids: string[]
+          subscription_ids: string[]
+          service_categories: string[]
+          date_range_type: 'last_7_days' | 'last_30_days' | 'last_month' | 'last_quarter' | 'custom'
+          custom_start_date: string | null
+          custom_end_date: string | null
+          include_summary: boolean
+          include_trend_chart: boolean
+          include_breakdown_chart: boolean
+          include_detailed_table: boolean
+          include_recommendations: boolean
+          recipient_emails: string[]
+          is_active: boolean
+          last_sent_at: string | null
+          next_scheduled_at: string | null
+          created_at: string
+          created_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          name: string
+          description?: string | null
+          schedule_type: 'daily' | 'weekly' | 'monthly' | 'quarterly'
+          schedule_day_of_week?: number | null
+          schedule_day_of_month?: number | null
+          schedule_time?: string
+          tenant_ids?: string[]
+          subscription_ids?: string[]
+          service_categories?: string[]
+          date_range_type?: 'last_7_days' | 'last_30_days' | 'last_month' | 'last_quarter' | 'custom'
+          custom_start_date?: string | null
+          custom_end_date?: string | null
+          include_summary?: boolean
+          include_trend_chart?: boolean
+          include_breakdown_chart?: boolean
+          include_detailed_table?: boolean
+          include_recommendations?: boolean
+          recipient_emails: string[]
+          is_active?: boolean
+          last_sent_at?: string | null
+          next_scheduled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          name?: string
+          description?: string | null
+          schedule_type?: 'daily' | 'weekly' | 'monthly' | 'quarterly'
+          schedule_day_of_week?: number | null
+          schedule_day_of_month?: number | null
+          schedule_time?: string
+          tenant_ids?: string[]
+          subscription_ids?: string[]
+          service_categories?: string[]
+          date_range_type?: 'last_7_days' | 'last_30_days' | 'last_month' | 'last_quarter' | 'custom'
+          custom_start_date?: string | null
+          custom_end_date?: string | null
+          include_summary?: boolean
+          include_trend_chart?: boolean
+          include_breakdown_chart?: boolean
+          include_detailed_table?: boolean
+          include_recommendations?: boolean
+          recipient_emails?: string[]
+          is_active?: boolean
+          last_sent_at?: string | null
+          next_scheduled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+        }
+      }
+      report_history: {
+        Row: {
+          id: string
+          org_id: string
+          report_config_id: string | null
+          report_name: string
+          report_type: 'scheduled' | 'manual'
+          date_range_start: string
+          date_range_end: string
+          pdf_url: string | null
+          file_size_bytes: number | null
+          sent_to_emails: string[]
+          generation_status: 'pending' | 'generating' | 'completed' | 'failed'
+          error_message: string | null
+          generated_at: string
+          generated_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          report_config_id?: string | null
+          report_name: string
+          report_type: 'scheduled' | 'manual'
+          date_range_start: string
+          date_range_end: string
+          pdf_url?: string | null
+          file_size_bytes?: number | null
+          sent_to_emails?: string[]
+          generation_status?: 'pending' | 'generating' | 'completed' | 'failed'
+          error_message?: string | null
+          generated_at?: string
+          generated_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          report_config_id?: string | null
+          report_name?: string
+          report_type?: 'scheduled' | 'manual'
+          date_range_start?: string
+          date_range_end?: string
+          pdf_url?: string | null
+          file_size_bytes?: number | null
+          sent_to_emails?: string[]
+          generation_status?: 'pending' | 'generating' | 'completed' | 'failed'
+          error_message?: string | null
+          generated_at?: string
+          generated_by?: string | null
+          created_at?: string
+        }
+      }
+      scheduled_reports: {
+        Row: {
+          id: string
+          org_id: string
+          tenant_id: string
+          name: string
+          frequency: string
+          report_type: string
+          recipients: string[]
+          format: string
+          enabled: boolean
+          last_run_at: string | null
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          tenant_id: string
+          name: string
+          frequency: string
+          report_type: string
+          recipients: string[]
+          format?: string
+          enabled?: boolean
+          last_run_at?: string | null
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          tenant_id?: string
+          name?: string
+          frequency?: string
+          report_type?: string
+          recipients?: string[]
+          format?: string
+          enabled?: boolean
+          last_run_at?: string | null
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      organization_branding: {
+        Row: {
+          id: string
+          org_id: string
+          logo_url: string | null
+          primary_color: string
+          secondary_color: string
+          company_name: string | null
+          company_website: string | null
+          company_address: string | null
+          company_phone: string | null
+          email_header_text: string | null
+          email_footer_text: string | null
+          report_header_text: string | null
+          report_footer_text: string | null
+          show_powered_by: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
+          company_name?: string | null
+          company_website?: string | null
+          company_address?: string | null
+          company_phone?: string | null
+          email_header_text?: string | null
+          email_footer_text?: string | null
+          report_header_text?: string | null
+          report_footer_text?: string | null
+          show_powered_by?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
+          company_name?: string | null
+          company_website?: string | null
+          company_address?: string | null
+          company_phone?: string | null
+          email_header_text?: string | null
+          email_footer_text?: string | null
+          report_header_text?: string | null
+          report_footer_text?: string | null
+          show_powered_by?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
