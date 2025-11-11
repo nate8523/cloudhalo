@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
       .order('resource_name', { ascending: true })
       .range(offset, offset + limit - 1)
 
-    const { data: resources, error: queryError, count } = await query
+    const { data: resources, error: queryError, count } = (await query) as { data: any; error: any; count: number | null }
 
     if (queryError) {
       console.error('[Resources API] Query error:', queryError)
@@ -122,27 +122,27 @@ export async function GET(request: NextRequest) {
     }
 
     // Get summary statistics
-    const { data: stats } = await supabase
+    const { data: stats } = (await supabase
       .from('azure_resources')
       .select('resource_type, tenant_id, location')
-      .eq('org_id', userData.org_id)
+      .eq('org_id', userData.org_id)) as { data: any }
 
     let resourceTypeCounts: Record<string, number> = {}
     let tenantCounts: Record<string, number> = {}
     let locationCounts: Record<string, number> = {}
 
     if (stats) {
-      resourceTypeCounts = stats.reduce((acc, r) => {
+      resourceTypeCounts = stats.reduce((acc: Record<string, number>, r: any) => {
         acc[r.resource_type] = (acc[r.resource_type] || 0) + 1
         return acc
       }, {} as Record<string, number>)
 
-      tenantCounts = stats.reduce((acc, r) => {
+      tenantCounts = stats.reduce((acc: Record<string, number>, r: any) => {
         acc[r.tenant_id] = (acc[r.tenant_id] || 0) + 1
         return acc
       }, {} as Record<string, number>)
 
-      locationCounts = stats.reduce((acc, r) => {
+      locationCounts = stats.reduce((acc: Record<string, number>, r: any) => {
         if (r.location) {
           acc[r.location] = (acc[r.location] || 0) + 1
         }

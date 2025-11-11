@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       tenantsQuery = tenantsQuery.eq('id', body.tenantId)
     }
 
-    const { data: tenants, error: tenantsError } = await tenantsQuery
+    const { data: tenants, error: tenantsError } = (await tenantsQuery) as { data: any; error: any }
 
     if (tenantsError || !tenants || tenants.length === 0) {
       return NextResponse.json(
@@ -101,11 +101,11 @@ export async function POST(request: NextRequest) {
         )
 
         // Get subscriptions for this tenant
-        const { data: subscriptions } = await supabase
+        const { data: subscriptions } = (await supabase
           .from('azure_subscriptions')
           .select('subscription_id')
           .eq('tenant_id', tenant.id)
-          .eq('state', 'Enabled')
+          .eq('state', 'Enabled')) as { data: any }
 
         if (!subscriptions || subscriptions.length === 0) {
           console.log(`[Resource Sync] No enabled subscriptions for tenant ${tenant.id}`)
@@ -119,8 +119,12 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        const subscriptionIds = subscriptions.map(s => s.subscription_id)
+        const subscriptionIds = subscriptions.map((s: any) => s.subscription_id)
         console.log(`[Resource Sync] Discovering resources for ${subscriptionIds.length} subscription(s)`)
+
+        // Create sync timestamp BEFORE discovering resources
+        // This timestamp will be used for both upserting and cleanup
+        const syncTimestamp = new Date().toISOString()
 
         // Discover resources using Resource Graph
         const resources = await discoverResourcesPaginated(credential, subscriptionIds)
@@ -142,7 +146,7 @@ export async function POST(request: NextRequest) {
           provisioning_state: resource.provisioningState || null,
           power_state: resource.powerState || null,
           properties: resource.properties || {},
-          last_synced_at: new Date().toISOString()
+          last_synced_at: syncTimestamp
         }))
 
         // Upsert resources in batches (Supabase has limits)
@@ -152,25 +156,39 @@ export async function POST(request: NextRequest) {
         for (let i = 0; i < resourceRecords.length; i += batchSize) {
           const batch = resourceRecords.slice(i, i + batchSize)
 
-          const { error: upsertError } = await supabase
-            .from('azure_resources')
+          const { data: upsertData, error: upsertError } = await (supabase
+            .from('azure_resources') as any)
             .upsert(batch, {
               onConflict: 'resource_id',
               ignoreDuplicates: false
             })
+            .select()
 
           if (upsertError) {
             console.error(`[Resource Sync] Error upserting resources batch ${i}-${i + batchSize}:`, upsertError)
+            console.error(`[Resource Sync] Error details:`, JSON.stringify(upsertError, null, 2))
             throw new Error(`Failed to sync resources: ${upsertError.message}`)
           }
 
           syncedCount += batch.length
           console.log(`[Resource Sync] Synced ${syncedCount}/${resourceRecords.length} resources`)
+          console.log(`[Resource Sync] Upserted ${upsertData?.length || 0} records in this batch`)
         }
+
+        // Verify the data was actually inserted by querying it back
+        const { data: verifyData, error: verifyError, count: verifyCount } = await supabase
+          .from('azure_resources')
+          .select('*', { count: 'exact' })
+          .eq('tenant_id', tenant.id)
+
+        console.log(`[Resource Sync] Verification query - Found ${verifyCount} resources for tenant ${tenant.id}`)
+        if (verifyError) {
+          console.error(`[Resource Sync] Verification query error:`, verifyError)
+        }
+        console.log(`[Resource Sync] Verification - Can read back ${verifyData?.length || 0} resources`)
 
         // Mark old resources as stale (resources that weren't in the latest sync)
         // This helps identify deleted resources
-        const syncTimestamp = new Date().toISOString()
         const { error: cleanupError } = await supabase
           .from('azure_resources')
           .delete()
