@@ -28,7 +28,7 @@ export default async function ResourceDetailPage({ params }: { params: { id: str
     .from('users')
     .select('org_id')
     .eq('id', user.id)
-    .single()
+    .single() as { data: { org_id: string } | null; error: any }
 
   if (!userData?.org_id) {
     notFound()
