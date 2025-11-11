@@ -236,7 +236,7 @@ export async function POST(
             if (costs.length > 0) {
               const { error: costError } = await supabase
                 .from('cost_snapshots')
-                .upsert(costs, {
+                .upsert(costs as any, {
                   onConflict: 'tenant_id,subscription_id,resource_id,date',
                   ignoreDuplicates: false
                 })
