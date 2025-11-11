@@ -17,6 +17,7 @@ import {
   Moon,
   Sun,
   Package,
+  Lightbulb,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -30,6 +31,7 @@ const navigation = [
   { name: 'Tenants', href: '/dashboard/tenants', icon: Cloud },
   { name: 'Resources', href: '/dashboard/resources', icon: Package },
   { name: 'Costs', href: '/dashboard/costs', icon: DollarSign },
+  { name: 'Recommendations', href: '/dashboard/recommendations', icon: Lightbulb },
   { name: 'Alerts', href: '/dashboard/alerts', icon: Bell },
   { name: 'Optimization', href: '/dashboard/optimization', icon: TrendingDown },
 ]

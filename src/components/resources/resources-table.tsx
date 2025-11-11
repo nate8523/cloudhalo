@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -19,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Search, ChevronLeft, ChevronRight, Package } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, Package, Download } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Tenant {
@@ -46,6 +47,7 @@ interface ResourcesTableProps {
 }
 
 export function ResourcesTable({ tenants }: ResourcesTableProps) {
+  const router = useRouter()
   const [resources, setResources] = useState<AzureResource[]>([])
   const [filteredResources, setFilteredResources] = useState<AzureResource[]>([])
   const [loading, setLoading] = useState(true)
@@ -119,6 +121,41 @@ export function ResourcesTable({ tenants }: ResourcesTableProps) {
     fetchResources()
   }
 
+  // Handle export
+  const handleExport = async () => {
+    try {
+      const params = new URLSearchParams()
+
+      if (selectedTenant !== 'all') {
+        params.append('tenantId', selectedTenant)
+      }
+      if (selectedType !== 'all') {
+        params.append('resourceType', selectedType)
+      }
+      if (selectedLocation !== 'all') {
+        params.append('location', selectedLocation)
+      }
+      if (search) {
+        params.append('search', search)
+      }
+
+      const response = await fetch(`/api/resources/export?${params.toString()}`)
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `azure-resources-${new Date().toISOString().split('T')[0]}.csv`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
+      }
+    } catch (error) {
+      console.error('Error exporting resources:', error)
+    }
+  }
+
   // Get unique resource types
   const resourceTypes = Array.from(new Set(resources.map(r => r.resource_type))).sort()
 
@@ -131,77 +168,88 @@ export function ResourcesTable({ tenants }: ResourcesTableProps) {
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <Card variant="premium" className="p-4">
-        <div className="grid gap-4 md:grid-cols-4">
-          {/* Search */}
-          <div className="md:col-span-1">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Search resources..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="flex-1"
-              />
-              <Button variant="outline" size="icon" onClick={handleSearch}>
-                <Search className="h-4 w-4" />
-              </Button>
+      {/* Filters and Export */}
+      <div className="flex items-center justify-between gap-4">
+        <Card variant="premium" className="p-4 flex-1">
+          <div className="grid gap-4 md:grid-cols-4">
+            {/* Search */}
+            <div className="md:col-span-1">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Search resources..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className="flex-1"
+                />
+                <Button variant="outline" size="icon" onClick={handleSearch}>
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Tenant Filter */}
+            <div>
+              <Select value={selectedTenant} onValueChange={setSelectedTenant}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Tenants" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tenants</SelectItem>
+                  {tenants.map((tenant) => (
+                    <SelectItem key={tenant.id} value={tenant.id}>
+                      {tenant.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Type Filter */}
+            <div>
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {resourceTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Location Filter */}
+            <div>
+              <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Locations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Locations</SelectItem>
+                  {locations.map((location) => (
+                    <SelectItem key={location} value={location}>
+                      {location}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+        </Card>
 
-          {/* Tenant Filter */}
-          <div>
-            <Select value={selectedTenant} onValueChange={setSelectedTenant}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Tenants" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Tenants</SelectItem>
-                {tenants.map((tenant) => (
-                  <SelectItem key={tenant.id} value={tenant.id}>
-                    {tenant.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Type Filter */}
-          <div>
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {resourceTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Location Filter */}
-          <div>
-            <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Locations" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Locations</SelectItem>
-                {locations.map((location) => (
-                  <SelectItem key={location} value={location}>
-                    {location}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </Card>
+        <Button
+          variant="outline"
+          onClick={handleExport}
+          disabled={loading || totalCount === 0}
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Export CSV
+        </Button>
+      </div>
 
       {/* Results Count */}
       <div className="text-sm text-muted-foreground">
@@ -239,7 +287,8 @@ export function ResourcesTable({ tenants }: ResourcesTableProps) {
                 filteredResources.map((resource) => (
                   <tr
                     key={resource.id}
-                    className="border-b border-border hover:bg-accent/50 transition-colors"
+                    onClick={() => router.push(`/dashboard/resources/${resource.id}`)}
+                    className="border-b border-border hover:bg-accent/50 transition-colors cursor-pointer"
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-2">

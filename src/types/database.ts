@@ -364,6 +364,98 @@ export interface Database {
           updated_at?: string
         }
       }
+      optimization_recommendations: {
+        Row: {
+          id: string
+          org_id: string
+          tenant_id: string
+          subscription_id: string
+          recommendation_type: string
+          severity: string
+          title: string
+          description: string
+          resource_id: string
+          resource_name: string
+          resource_type: string
+          resource_group: string
+          location: string | null
+          current_monthly_cost_usd: number
+          potential_monthly_savings_usd: number
+          potential_annual_savings_usd: number
+          metrics: Json
+          suggested_action: string | null
+          implementation_effort: string
+          status: string
+          dismissed_at: string | null
+          dismissed_by: string | null
+          implemented_at: string | null
+          detected_at: string
+          last_evaluated_at: string
+          expires_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          tenant_id: string
+          subscription_id: string
+          recommendation_type: string
+          severity?: string
+          title: string
+          description: string
+          resource_id: string
+          resource_name: string
+          resource_type: string
+          resource_group: string
+          location?: string | null
+          current_monthly_cost_usd?: number
+          potential_monthly_savings_usd?: number
+          potential_annual_savings_usd?: number
+          metrics?: Json
+          suggested_action?: string | null
+          implementation_effort?: string
+          status?: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          implemented_at?: string | null
+          detected_at?: string
+          last_evaluated_at?: string
+          expires_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          tenant_id?: string
+          subscription_id?: string
+          recommendation_type?: string
+          severity?: string
+          title?: string
+          description?: string
+          resource_id?: string
+          resource_name?: string
+          resource_type?: string
+          resource_group?: string
+          location?: string | null
+          current_monthly_cost_usd?: number
+          potential_monthly_savings_usd?: number
+          potential_annual_savings_usd?: number
+          metrics?: Json
+          suggested_action?: string | null
+          implementation_effort?: string
+          status?: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          implemented_at?: string | null
+          detected_at?: string
+          last_evaluated_at?: string
+          expires_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
