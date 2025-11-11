@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import type { Database } from '@/types/database'
 
 export async function DELETE() {
   try {
@@ -12,13 +13,13 @@ export async function DELETE() {
     }
 
     // Get user's org_id
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('org_id, avatar_url')
       .eq('id', user.id)
-      .single()
+      .single<Pick<Database['public']['Tables']['users']['Row'], 'org_id' | 'avatar_url'>>()
 
-    if (!userData) {
+    if (userError || !userData) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 

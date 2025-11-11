@@ -25,37 +25,37 @@ export default async function TenantDetailsPage({ params }: TenantDetailsPagePro
   }
 
   // Get user's organization
-  const { data: userData } = await supabase
-    .from('users')
+  const { data: userData } = await (supabase
+    .from('users') as any)
     .select('org_id')
     .eq('id', user.id)
-    .single() as { data: { org_id: string } | null }
+    .single()
 
   if (!userData?.org_id) {
     notFound()
   }
 
   // Fetch tenant with RLS protection
-  const { data: tenant, error } = await supabase
-    .from('azure_tenants')
+  const { data: tenant, error } = await (supabase
+    .from('azure_tenants') as any)
     .select('*')
     .eq('id', id)
     .eq('org_id', userData.org_id)
-    .single() as { data: any | null, error: any }
+    .single()
 
   if (error || !tenant) {
     notFound()
   }
 
   // Fetch subscriptions for this tenant
-  const { data: subscriptions } = await supabase
-    .from('azure_subscriptions')
+  const { data: subscriptions } = await (supabase
+    .from('azure_subscriptions') as any)
     .select('*')
     .eq('tenant_id', id)
-    .order('created_at', { ascending: false }) as { data: any[] | null }
+    .order('created_at', { ascending: false })
 
   const subscriptionCount = subscriptions?.length || 0
-  const enabledCount = subscriptions?.filter(s => s.state === 'Enabled').length || 0
+  const enabledCount = subscriptions?.filter((s: any) => s.state === 'Enabled').length || 0
 
   // Calculate credential expiry status
   const getExpiryStatus = () => {
@@ -219,7 +219,7 @@ export default async function TenantDetailsPage({ params }: TenantDetailsPagePro
             </div>
           ) : (
             <div className="space-y-3">
-              {subscriptions?.map((subscription) => (
+              {subscriptions?.map((subscription: any) => (
                 <div
                   key={subscription.id}
                   className="p-4 border rounded-lg hover:border-primary/50 transition-colors"

@@ -1,0 +1,26 @@
+services:
+  - type: web  # Use 'web' type for free tier (workers not available on free)
+    name: cloudhalo-worker
+    env: node
+    region: oregon
+    plan: free  # FREE tier - Change to 'starter' ($7/mo) when ready to scale
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: COST_POLLING_INTERVAL_HOURS
+        value: 4
+      - key: PORT
+        value: 10000  # Render requires port 10000 for web services
+      # The following should be added via Render dashboard (secret values)
+      # - SUPABASE_URL
+      # - SUPABASE_SERVICE_ROLE_KEY
+      # - AZURE_CREDENTIAL_ENCRYPTION_KEY
+    healthCheckPath: /health
+    autoDeploy: true
+    # Free tier spins down after 15 min inactivity
+    # Cron jobs will wake it up automatically
+    # Or use external ping service (UptimeRobot) to keep alive

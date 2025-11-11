@@ -12,8 +12,8 @@ export async function GET() {
     }
 
     // Get user profile from database
-    const { data: profile, error: profileError } = await supabase
-      .from('users')
+    const { data: profile, error: profileError } = await (supabase
+      .from('users') as any)
       .select('id, email, full_name, avatar_url, role, org_id')
       .eq('id', user.id)
       .single()
@@ -50,8 +50,8 @@ export async function PATCH(request: NextRequest) {
     const { full_name, email } = body
 
     // Update user profile in database
-    const { data: updatedProfile, error: updateError } = await supabase
-      .from('users')
+    const { data: updatedProfile, error: updateError } = await (supabase
+      .from('users') as any)
       .update({
         full_name,
         email,

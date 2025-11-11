@@ -199,6 +199,106 @@ export interface Database {
           updated_at?: string
         }
       }
+      azure_subscriptions: {
+        Row: {
+          id: string
+          tenant_id: string
+          subscription_id: string
+          name: string
+          display_name: string | null
+          state: string
+          subscription_policies: Json | null
+          tags: Json | null
+          discovered_at: string
+          last_synced_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          subscription_id: string
+          name: string
+          display_name?: string | null
+          state: string
+          subscription_policies?: Json | null
+          tags?: Json | null
+          discovered_at?: string
+          last_synced_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          subscription_id?: string
+          name?: string
+          display_name?: string | null
+          state?: string
+          subscription_policies?: Json | null
+          tags?: Json | null
+          discovered_at?: string
+          last_synced_at?: string | null
+          created_at?: string
+        }
+      }
+      alert_history: {
+        Row: {
+          id: string
+          org_id: string
+          alert_rule_id: string
+          tenant_id: string
+          subscription_id: string | null
+          severity: string
+          title: string
+          message: string
+          current_value: number
+          threshold_value: number
+          status: string
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          resolved_at: string | null
+          metadata: Json | null
+          triggered_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          alert_rule_id: string
+          tenant_id: string
+          subscription_id?: string | null
+          severity: string
+          title: string
+          message: string
+          current_value: number
+          threshold_value: number
+          status?: string
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          resolved_at?: string | null
+          metadata?: Json | null
+          triggered_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          alert_rule_id?: string
+          tenant_id?: string
+          subscription_id?: string | null
+          severity?: string
+          title?: string
+          message?: string
+          current_value?: number
+          threshold_value?: number
+          status?: string
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          resolved_at?: string | null
+          metadata?: Json | null
+          triggered_at?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
