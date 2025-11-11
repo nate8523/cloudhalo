@@ -299,6 +299,71 @@ export interface Database {
           created_at?: string
         }
       }
+      azure_resources: {
+        Row: {
+          id: string
+          org_id: string
+          tenant_id: string
+          subscription_id: string
+          resource_id: string
+          resource_name: string
+          resource_type: string
+          resource_group: string
+          location: string | null
+          sku: string | null
+          kind: string | null
+          tags: Json
+          provisioning_state: string | null
+          power_state: string | null
+          properties: Json
+          discovered_at: string
+          last_synced_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          tenant_id: string
+          subscription_id: string
+          resource_id: string
+          resource_name: string
+          resource_type: string
+          resource_group: string
+          location?: string | null
+          sku?: string | null
+          kind?: string | null
+          tags?: Json
+          provisioning_state?: string | null
+          power_state?: string | null
+          properties?: Json
+          discovered_at?: string
+          last_synced_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          tenant_id?: string
+          subscription_id?: string
+          resource_id?: string
+          resource_name?: string
+          resource_type?: string
+          resource_group?: string
+          location?: string | null
+          sku?: string | null
+          kind?: string | null
+          tags?: Json
+          provisioning_state?: string | null
+          power_state?: string | null
+          properties?: Json
+          discovered_at?: string
+          last_synced_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

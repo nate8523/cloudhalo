@@ -5,13 +5,16 @@ import { ChartSkeleton } from '@/components/ui/chart-skeleton'
 import { ChartPlaceholder } from '@/components/ui/chart-placeholder'
 import { DollarSign, TrendingUp, AlertTriangle, Cloud } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { SyncCostsButton } from '@/components/sync-costs-button'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
 
-  // Fetch tenant count from database
+  // Fetch tenant count and cost data from database
   const { data: { user } } = await supabase.auth.getUser()
   let totalTenants = 0
+  let totalCost = 0
+  let resourceCount = 0
 
   if (user) {
     // Get user's organization
@@ -29,23 +32,46 @@ export default async function DashboardPage() {
         .eq('org_id', userData.org_id)
 
       totalTenants = count || 0
+
+      // Get total monthly cost from cost_snapshots
+      const startOfMonth = new Date()
+      startOfMonth.setDate(1)
+      startOfMonth.setHours(0, 0, 0, 0)
+
+      const { data: costData } = await supabase
+        .from('cost_snapshots')
+        .select('cost_usd, resource_id')
+        .eq('org_id', userData.org_id)
+        .gte('date', startOfMonth.toISOString().split('T')[0])
+
+      if (costData) {
+        totalCost = costData.reduce((sum, record) => sum + Number(record.cost_usd || 0), 0)
+
+        // Count unique resources
+        const uniqueResources = new Set(costData.map(r => r.resource_id).filter(Boolean))
+        resourceCount = uniqueResources.size
+      }
     }
   }
 
   const stats = {
-    totalCost: 24567.89,
+    totalCost,
     totalTenants,
     activeAlerts: 0,
     savingsOpportunities: 0,
+    resourceCount,
   }
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="space-y-2">
-        <h1 className="text-display-sm font-bold text-foreground">Dashboard</h1>
-        <p className="text-body text-muted-foreground">
-          Overview of all your Azure tenants and costs
-        </p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <h1 className="text-display-sm font-bold text-foreground">Dashboard</h1>
+          <p className="text-body text-muted-foreground">
+            Overview of all your Azure tenants and costs
+          </p>
+        </div>
+        {totalTenants > 0 && <SyncCostsButton />}
       </div>
 
       {/* Stats Grid */}

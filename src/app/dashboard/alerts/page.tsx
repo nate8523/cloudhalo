@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,7 +11,8 @@ import {
   CheckCircle2,
   Clock,
   TrendingUp,
-  Filter
+  Filter,
+  Settings
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { AlertActions } from '@/components/alerts/alert-actions'
@@ -125,10 +127,18 @@ export default async function AlertsPage() {
             Monitor and manage cost alerts from your Azure subscriptions
           </p>
         </div>
-        <Button variant="outline" size="sm">
-          <Filter className="h-4 w-4 mr-2" />
-          Filter
-        </Button>
+        <div className="flex gap-2">
+          <Link href="/dashboard/alerts/rules">
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-2" />
+              Manage Rules
+            </Button>
+          </Link>
+          <Button variant="outline" size="sm">
+            <Filter className="h-4 w-4 mr-2" />
+            Filter
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}

@@ -48,7 +48,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button"
     const [ripples, setRipples] = React.useState<Array<{ x: number; y: number; id: number }>>([])
 
-    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const handleClick = React.useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
       if (withRipple && !asChild) {
         const button = e.currentTarget
         const rect = button.getBoundingClientRect()
@@ -64,7 +64,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       }
 
       onClick?.(e)
-    }
+    }, [withRipple, asChild, onClick])
 
     // When using asChild, disable ripple effects as Slot expects single child
     const effectiveRipple = asChild ? false : withRipple

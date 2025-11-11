@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Moon,
   Sun,
+  Package,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -27,6 +28,7 @@ import { useEffect, useState } from 'react'
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Tenants', href: '/dashboard/tenants', icon: Cloud },
+  { name: 'Resources', href: '/dashboard/resources', icon: Package },
   { name: 'Costs', href: '/dashboard/costs', icon: DollarSign },
   { name: 'Alerts', href: '/dashboard/alerts', icon: Bell },
   { name: 'Optimization', href: '/dashboard/optimization', icon: TrendingDown },

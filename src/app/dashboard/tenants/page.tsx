@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Plus, Cloud, Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { SyncCostsButton } from '@/components/sync-costs-button'
 
 export default async function TenantsPage() {
   const supabase = await createClient()
@@ -41,12 +42,15 @@ export default async function TenantsPage() {
             Manage your connected Azure client tenants
           </p>
         </div>
-        <Link href="/dashboard/tenants/new">
-          <Button className="shadow-md hover:shadow-lg transition-all">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Tenant
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          {tenants.length > 0 && <SyncCostsButton />}
+          <Link href="/dashboard/tenants/new">
+            <Button className="shadow-md hover:shadow-lg transition-all">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Tenant
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {tenants.length === 0 ? (

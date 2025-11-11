@@ -3,17 +3,16 @@ import { createClient } from '@/lib/supabase/server'
 import { ClientSecretCredential } from '@azure/identity'
 import { CostManagementClient } from '@azure/arm-costmanagement'
 import { decryptAzureClientSecret } from '@/lib/encryption/vault'
+import { evaluateAlertRules } from '@/lib/alerts/evaluate'
 
 /**
  * Vercel Cron Job - Poll Azure costs
  *
- * Add to vercel.json:
- * {
- *   "crons": [{
- *     "path": "/api/cron/poll-costs",
- *     "schedule": "0 */4 * * *"
- *   }]
- * }
+ * Add this to vercel.json:
+ *
+ * crons: [{ path: "/api/cron/poll-costs", schedule: "0 star-slash-4 star star star" }]
+ *
+ * Replace "star-slash" with the actual asterisk-forward-slash combo
  *
  * Or call manually: POST /api/cron/poll-costs
  * Header: Authorization: Bearer YOUR_CRON_SECRET
@@ -108,13 +107,21 @@ export async function POST(request: Request) {
     }
 
     const duration = Date.now() - startTime
-    console.log(`[CRON] Completed in ${duration}ms. Total records: ${totalCostsIngested}`)
+    console.log(`[CRON] Completed cost polling in ${duration}ms. Total records: ${totalCostsIngested}`)
+
+    // Step 2: Evaluate alert rules
+    console.log('[CRON] Evaluating alert rules...')
+    const alertResults = await evaluateAlertRules(supabase)
+
+    const totalDuration = Date.now() - startTime
+    console.log(`[CRON] Total job completed in ${totalDuration}ms`)
 
     return NextResponse.json({
       success: true,
       totalCostsIngested,
-      duration,
-      results
+      duration: totalDuration,
+      results,
+      alerts: alertResults
     })
 
   } catch (error: any) {

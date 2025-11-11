@@ -162,10 +162,106 @@ export async function POST(
         }
       }
 
+      // Fetch cost data for all subscriptions
+      let costsIngested = 0
+
+      if (subscriptions.length > 0) {
+        console.log(`[SYNC] Fetching costs for ${subscriptions.length} subscription(s)`)
+
+        // Import cost management client
+        const { CostManagementClient } = await import('@azure/arm-costmanagement')
+        const costClient = new CostManagementClient(credential)
+
+        for (const sub of subscriptions) {
+          try {
+            const scope = `/subscriptions/${sub.subscription_id}`
+
+            const queryResult = await costClient.query.usage(scope, {
+              type: 'Usage',
+              timeframe: 'MonthToDate',
+              dataset: {
+                granularity: 'Daily',
+                aggregation: {
+                  totalCost: {
+                    name: 'Cost',
+                    function: 'Sum'
+                  }
+                },
+                grouping: [
+                  { type: 'Dimension', name: 'ResourceId' },
+                  { type: 'Dimension', name: 'ResourceType' },
+                  { type: 'Dimension', name: 'ResourceGroupName' },
+                  { type: 'Dimension', name: 'ServiceName' },
+                  { type: 'Dimension', name: 'ResourceLocation' }
+                ]
+              }
+            })
+
+            const costs = []
+            const columns = queryResult.columns || []
+            const costIndex = columns.findIndex((c: any) => c.name === 'Cost')
+            const dateIndex = columns.findIndex((c: any) => c.name === 'UsageDate')
+            const resourceIdIndex = columns.findIndex((c: any) => c.name === 'ResourceId')
+            const resourceTypeIndex = columns.findIndex((c: any) => c.name === 'ResourceType')
+            const resourceGroupIndex = columns.findIndex((c: any) => c.name === 'ResourceGroupName')
+            const serviceIndex = columns.findIndex((c: any) => c.name === 'ServiceName')
+            const locationIndex = columns.findIndex((c: any) => c.name === 'ResourceLocation')
+
+            for (const row of queryResult.rows || []) {
+              const cost = parseFloat(row[costIndex]) || 0
+              if (cost === 0) continue
+
+              const resourceId = row[resourceIdIndex] || null
+              const resourceName = resourceId ? resourceId.split('/').pop() : null
+              const dateStr = row[dateIndex]?.toString() || ''
+              const date = dateStr.length === 8
+                ? `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`
+                : new Date().toISOString().split('T')[0]
+
+              costs.push({
+                org_id: userData.org_id,
+                tenant_id: id,
+                subscription_id: sub.subscription_id,
+                resource_id: resourceId,
+                resource_name: resourceName,
+                resource_type: row[resourceTypeIndex] || null,
+                resource_group: row[resourceGroupIndex] || null,
+                service_category: row[serviceIndex] || null,
+                location: row[locationIndex] || null,
+                cost_usd: cost,
+                date
+              })
+            }
+
+            if (costs.length > 0) {
+              const { error: costError } = await supabase
+                .from('cost_snapshots')
+                .upsert(costs, {
+                  onConflict: 'tenant_id,subscription_id,resource_id,date',
+                  ignoreDuplicates: false
+                })
+
+              if (!costError) {
+                costsIngested += costs.length
+                console.log(`[SYNC] Ingested ${costs.length} cost records for subscription ${sub.subscription_id}`)
+              } else {
+                console.error(`[SYNC] Error ingesting costs for ${sub.subscription_id}:`, costError)
+              }
+            } else {
+              console.log(`[SYNC] No costs found for subscription ${sub.subscription_id}`)
+            }
+
+          } catch (costError: any) {
+            console.error(`[SYNC] Error fetching costs for subscription ${sub.subscription_id}:`, costError.message)
+          }
+        }
+      }
+
       return NextResponse.json({
         success: true,
         message: 'Sync completed successfully',
         subscriptionsFound: subscriptions.length,
+        costsIngested,
         lastSyncAt: new Date().toISOString()
       })
 
