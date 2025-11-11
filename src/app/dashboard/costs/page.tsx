@@ -90,7 +90,7 @@ export default async function CostsPage({ searchParams }: CostsPageProps) {
 
   // Get unique service categories for filtering
   const serviceCategories = Array.from(
-    new Set(costData?.map(r => r.service_category).filter(Boolean) || [])
+    new Set(costData?.map(r => r.service_category).filter((cat): cat is string => cat !== null) || [])
   ).sort()
 
   return (
