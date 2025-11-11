@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { CostsPageClient } from './costs-page-client'
+import type { Database } from '@/types/database'
+
+type CostSnapshot = Database['public']['Tables']['cost_snapshots']['Row']
 
 interface CostsPageProps {
   searchParams: Promise<{
@@ -53,7 +56,7 @@ export default async function CostsPage({ searchParams }: CostsPageProps) {
     query = query.eq('service_category', params.serviceCategory)
   }
 
-  const { data: costData } = await query
+  const { data: costData } = await query as { data: CostSnapshot[] | null; error: any }
 
   // Fetch tenants for filter dropdown
   const { data: tenants } = await supabase
@@ -78,7 +81,7 @@ export default async function CostsPage({ searchParams }: CostsPageProps) {
     .select('cost_usd')
     .eq('org_id', userData.org_id)
     .gte('date', prevStartDate)
-    .lte('date', prevEndDate)
+    .lte('date', prevEndDate) as { data: { cost_usd: number }[] | null; error: any }
 
   const prevTotalCost = prevCostData?.reduce((sum, record) => sum + Number(record.cost_usd || 0), 0) || 0
   const costChange = prevTotalCost > 0
