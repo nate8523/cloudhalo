@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       .from('azure_tenants')
       .select('id, name, azure_tenant_id, org_id')
       .eq('id', tenant_id)
-      .eq('org_id', userData.org_id)
+      .eq('org_id', (userData as any).org_id)
       .single()
 
     if (tenantError || !tenant) {
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     const { data: orgBranding } = await supabase
       .from('organization_branding')
       .select('logo_url, primary_color, company_name')
-      .eq('org_id', userData.org_id)
+      .eq('org_id', (userData as any).org_id)
       .single()
 
     // Fetch cost data for the period
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       .select(
         'date, cost_usd, service_category, resource_name, resource_type, location'
       )
-      .eq('org_id', userData.org_id)
+      .eq('org_id', (userData as any).org_id)
       .eq('tenant_id', tenant_id)
       .gte('date', start_date)
       .lte('date', end_date)
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate total cost
-    const totalCost = costData?.reduce((sum, row) => sum + row.cost_usd, 0) || 0
+    const totalCost = costData?.reduce((sum, row) => sum + (row as any).cost_usd, 0) || 0
 
     // Generate PDF
     const pdfBuffer = await generateCostReportPDF({
@@ -101,18 +101,18 @@ export async function POST(request: NextRequest) {
         end: end_date,
       },
       tenantInfo: {
-        name: tenant.name,
-        azure_tenant_id: tenant.azure_tenant_id,
+        name: (tenant as any).name,
+        azure_tenant_id: (tenant as any).azure_tenant_id,
       },
       costData: costData || [],
       totalCost,
       branding: orgBranding || undefined,
-      generatedBy: userData.full_name || user.email,
+      generatedBy: (userData as any).full_name || user.email,
       generatedAt: new Date(),
     })
 
     // Return PDF as downloadable file
-    const filename = `azure-cost-report-${tenant.name.replace(/\s+/g, '-')}-${start_date}-to-${end_date}.pdf`
+    const filename = `azure-cost-report-${(tenant as any).name.replace(/\s+/g, '-')}-${start_date}-to-${end_date}.pdf`
 
     return new NextResponse(pdfBuffer as any, {
       status: 200,

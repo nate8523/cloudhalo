@@ -50,7 +50,7 @@ export async function GET(
       `
       )
       .eq('id', id)
-      .eq('org_id', userData.org_id)
+      .eq('org_id', (userData as any).org_id)
       .single()
 
     if (reportError || !report) {
@@ -111,7 +111,7 @@ export async function PUT(
       .from('scheduled_reports')
       .select('id, org_id')
       .eq('id', id)
-      .eq('org_id', userData.org_id)
+      .eq('org_id', (userData as any).org_id)
       .single()
 
     if (checkError || !existingReport) {
@@ -166,11 +166,12 @@ export async function PUT(
     updates.updated_at = new Date().toISOString()
 
     // Update report
-    const { data: updatedReport, error: updateError } = await supabase
+    const supabaseClient: any = supabase
+    const { data: updatedReport, error: updateError } = await supabaseClient
       .from('scheduled_reports')
       .update(updates)
       .eq('id', id)
-      .eq('org_id', userData.org_id)
+      .eq('org_id', (userData as any).org_id)
       .select()
       .single()
 
@@ -232,7 +233,7 @@ export async function DELETE(
       .from('scheduled_reports')
       .delete()
       .eq('id', id)
-      .eq('org_id', userData.org_id)
+      .eq('org_id', (userData as any).org_id)
 
     if (deleteError) {
       return NextResponse.json(

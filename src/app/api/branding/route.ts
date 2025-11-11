@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const { data: branding, error: brandingError } = await supabase
       .from('organization_branding')
       .select('*')
-      .eq('org_id', userData.org_id)
+      .eq('org_id', (userData as any).org_id)
       .single()
 
     if (brandingError && brandingError.code !== 'PGRST116') {
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     if (!branding) {
       return NextResponse.json({
         branding: {
-          org_id: userData.org_id,
+          org_id: (userData as any).org_id,
           logo_url: null,
           primary_color: null,
           company_name: null,
@@ -102,7 +102,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Only admins can update branding
-    if (userData.role !== 'admin' && userData.role !== 'owner') {
+    if ((userData as any).role !== 'admin' && (userData as any).role !== 'owner') {
       return NextResponse.json(
         { error: 'Only administrators can update branding' },
         { status: 403 }
@@ -125,14 +125,15 @@ export async function PUT(request: NextRequest) {
     const { data: existingBranding } = await supabase
       .from('organization_branding')
       .select('id')
-      .eq('org_id', userData.org_id)
+      .eq('org_id', (userData as any).org_id)
       .single()
 
     let result
 
     if (existingBranding) {
       // Update existing branding
-      const { data, error } = await supabase
+      const supabaseClient: any = supabase
+      const { data, error } = await supabaseClient
         .from('organization_branding')
         .update({
           logo_url,
@@ -140,7 +141,7 @@ export async function PUT(request: NextRequest) {
           company_name,
           updated_at: new Date().toISOString(),
         })
-        .eq('org_id', userData.org_id)
+        .eq('org_id', (userData as any).org_id)
         .select()
         .single()
 
@@ -157,11 +158,11 @@ export async function PUT(request: NextRequest) {
       const { data, error } = await supabase
         .from('organization_branding')
         .insert({
-          org_id: userData.org_id,
+          org_id: (userData as any).org_id,
           logo_url,
           primary_color,
           company_name,
-        })
+        } as any)
         .select()
         .single()
 

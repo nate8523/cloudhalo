@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         )
       `
       )
-      .eq('org_id', userData.org_id)
+      .eq('org_id', (userData as any).org_id)
       .order('created_at', { ascending: false })
 
     if (reportsError) {
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
       .from('azure_tenants')
       .select('id, org_id')
       .eq('id', tenant_id)
-      .eq('org_id', userData.org_id)
+      .eq('org_id', (userData as any).org_id)
       .single()
 
     if (tenantError || !tenant) {
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
     const { data: newReport, error: createError } = await supabase
       .from('scheduled_reports')
       .insert({
-        org_id: userData.org_id,
+        org_id: (userData as any).org_id,
         tenant_id,
         name,
         frequency,
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
         format,
         enabled,
         created_by: user.id,
-      })
+      } as any)
       .select()
       .single()
 

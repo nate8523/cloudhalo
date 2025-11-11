@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         // Determine if report should run today
         let shouldRun = false
 
-        switch (report.frequency) {
+        switch ((report as any).frequency) {
           case 'daily':
             shouldRun = true
             break
@@ -89,13 +89,13 @@ export async function POST(request: NextRequest) {
         results.processed++
 
         // Calculate date range based on frequency
-        const { startDate, endDate } = getDateRange(report.frequency)
+        const { startDate, endDate } = getDateRange((report as any).frequency)
 
         // Fetch organization branding
         const { data: branding } = await supabase
           .from('organization_branding')
           .select('logo_url, primary_color, company_name')
-          .eq('org_id', report.azure_tenants.org_id)
+          .eq('org_id', (report as any).azure_tenants.org_id)
           .single()
 
         // Fetch cost data
@@ -104,8 +104,8 @@ export async function POST(request: NextRequest) {
           .select(
             'date, cost_usd, service_category, resource_name, resource_type, location'
           )
-          .eq('org_id', report.azure_tenants.org_id)
-          .eq('tenant_id', report.tenant_id)
+          .eq('org_id', (report as any).azure_tenants.org_id)
+          .eq('tenant_id', (report as any).tenant_id)
           .gte('date', startDate)
           .lte('date', endDate)
           .order('date', { ascending: false })
@@ -113,24 +113,24 @@ export async function POST(request: NextRequest) {
         if (costError) {
           results.failed++
           results.errors.push(
-            `Report ${report.name}: Failed to fetch cost data - ${costError.message}`
+            `Report ${(report as any).name}: Failed to fetch cost data - ${costError.message}`
           )
           continue
         }
 
         // Calculate total cost
-        const totalCost = costData?.reduce((sum, row) => sum + row.cost_usd, 0) || 0
+        const totalCost = costData?.reduce((sum, row) => sum + (row as any).cost_usd, 0) || 0
 
         // Generate PDF
         const pdfBuffer = await generateCostReportPDF({
-          title: report.name,
+          title: (report as any).name,
           period: {
             start: startDate,
             end: endDate,
           },
           tenantInfo: {
-            name: report.azure_tenants.name,
-            azure_tenant_id: report.azure_tenants.azure_tenant_id,
+            name: (report as any).azure_tenants.name,
+            azure_tenant_id: (report as any).azure_tenants.azure_tenant_id,
           },
           costData: costData || [],
           totalCost,
@@ -140,12 +140,12 @@ export async function POST(request: NextRequest) {
         })
 
         // Send email with PDF attachment
-        const filename = `${report.name.replace(/\s+/g, '-')}-${startDate}-to-${endDate}.pdf`
+        const filename = `${(report as any).name.replace(/\s+/g, '-')}-${startDate}-to-${endDate}.pdf`
 
         await resend.emails.send({
           from: process.env.RESEND_FROM_EMAIL || 'reports@cloudhalo.app',
-          to: report.recipients,
-          subject: `${report.name} - ${formatDateRange(report.frequency)}`,
+          to: (report as any).recipients,
+          subject: `${(report as any).name} - ${formatDateRange((report as any).frequency)}`,
           html: generateEmailHtml(report, totalCost, startDate, endDate),
           attachments: [
             {
@@ -156,18 +156,19 @@ export async function POST(request: NextRequest) {
         })
 
         // Update last_run_at
-        await supabase
+        const supabaseClient: any = supabase
+        await supabaseClient
           .from('scheduled_reports')
           .update({ last_run_at: new Date().toISOString() })
-          .eq('id', report.id)
+          .eq('id', (report as any).id)
 
         results.sent++
       } catch (error) {
         results.failed++
         const errorMsg =
           error instanceof Error ? error.message : 'Unknown error'
-        results.errors.push(`Report ${report.name}: ${errorMsg}`)
-        console.error(`Error processing report ${report.id}:`, error)
+        results.errors.push(`Report ${(report as any).name}: ${errorMsg}`)
+        console.error(`Error processing report ${(report as any).id}:`, error)
       }
     }
 
@@ -257,17 +258,17 @@ function generateEmailHtml(
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${report.name}</title>
+        <title>${(report as any).name}</title>
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background-color: #0078D4; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-          <h1 style="color: white; margin: 0;">${report.name}</h1>
+          <h1 style="color: white; margin: 0;">${(report as any).name}</h1>
         </div>
 
         <div style="background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px;">
           <h2 style="color: #0078D4; margin-top: 0;">Azure Cost Report</h2>
 
-          <p>Your automated cost report for <strong>${report.azure_tenants.name}</strong> is ready.</p>
+          <p>Your automated cost report for <strong>${(report as any).azure_tenants.name}</strong> is ready.</p>
 
           <div style="background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #0078D4;">
             <h3 style="margin-top: 0; color: #666;">Report Period</h3>
@@ -287,7 +288,7 @@ function generateEmailHtml(
 
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666;">
             <p>This is an automated report from CloudHalo. To manage your scheduled reports, log in to your dashboard.</p>
-            <p style="margin: 5px 0;">Frequency: <strong>${report.frequency.charAt(0).toUpperCase() + report.frequency.slice(1)}</strong></p>
+            <p style="margin: 5px 0;">Frequency: <strong>${(report as any).frequency.charAt(0).toUpperCase() + (report as any).frequency.slice(1)}</strong></p>
           </div>
         </div>
 

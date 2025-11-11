@@ -37,7 +37,7 @@ export default async function ReportsPage() {
   const { data: tenants } = await supabase
     .from('azure_tenants')
     .select('id, name, azure_tenant_id')
-    .eq('org_id', userData.org_id)
+    .eq('org_id', (userData as any).org_id)
     .eq('connection_status', 'connected')
     .order('name')
 
