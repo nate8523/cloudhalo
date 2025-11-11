@@ -25,34 +25,34 @@ export default async function TenantDetailsPage({ params }: TenantDetailsPagePro
   }
 
   // Get user's organization
-  const { data: userData } = await (supabase
-    .from('users') as any)
+  const { data: userData } = await supabase
+    .from('users')
     .select('org_id')
     .eq('id', user.id)
-    .single()
+    .single() as { data: { org_id: string } | null; error: any }
 
   if (!userData?.org_id) {
     notFound()
   }
 
   // Fetch tenant with RLS protection
-  const { data: tenant, error } = await (supabase
-    .from('azure_tenants') as any)
+  const { data: tenant, error } = await supabase
+    .from('azure_tenants')
     .select('*')
     .eq('id', id)
     .eq('org_id', userData.org_id)
-    .single()
+    .single() as { data: any; error: any }
 
   if (error || !tenant) {
     notFound()
   }
 
   // Fetch subscriptions for this tenant
-  const { data: subscriptions } = await (supabase
-    .from('azure_subscriptions') as any)
+  const { data: subscriptions } = await supabase
+    .from('azure_subscriptions')
     .select('*')
     .eq('tenant_id', id)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false }) as { data: any[] | null; error: any }
 
   const subscriptionCount = subscriptions?.length || 0
   const enabledCount = subscriptions?.filter((s: any) => s.state === 'Enabled').length || 0

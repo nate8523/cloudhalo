@@ -49,7 +49,11 @@ export default async function ResourcesPage() {
       const { data: resources, count } = await supabase
         .from('azure_resources')
         .select('resource_type, location, last_synced_at', { count: 'exact' })
-        .eq('org_id', userData.org_id)
+        .eq('org_id', userData.org_id) as {
+          data: { resource_type: string; location: string | null; last_synced_at: string }[] | null
+          count: number | null
+          error: any
+        }
 
       stats.totalResources = count || 0
 

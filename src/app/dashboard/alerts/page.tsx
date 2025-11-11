@@ -28,19 +28,19 @@ export default async function AlertsPage() {
   }
 
   // Get user's organization
-  const { data: userData } = await (supabase
-    .from('users') as any)
+  const { data: userData } = await supabase
+    .from('users')
     .select('org_id')
     .eq('id', user.id)
-    .single()
+    .single() as { data: { org_id: string } | null; error: any }
 
   if (!userData?.org_id) {
     notFound()
   }
 
   // Fetch alert history with related data
-  const { data: alerts } = await (supabase
-    .from('alert_history') as any)
+  const { data: alerts } = await supabase
+    .from('alert_history')
     .select(`
       *,
       alert_rules (
@@ -54,7 +54,7 @@ export default async function AlertsPage() {
     `)
     .eq('org_id', userData.org_id)
     .order('triggered_at', { ascending: false })
-    .limit(100)
+    .limit(100) as { data: any[] | null; error: any }
 
   // Get summary statistics
   const activeAlerts = alerts?.filter((a: any) => a.status === 'active') || []

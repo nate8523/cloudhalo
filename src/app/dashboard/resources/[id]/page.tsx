@@ -40,7 +40,7 @@ export default async function ResourceDetailPage({ params }: { params: { id: str
     .select('*')
     .eq('id', params.id)
     .eq('org_id', userData.org_id)
-    .single()
+    .single() as { data: any; error: any }
 
   if (resourceError || !resource) {
     notFound()

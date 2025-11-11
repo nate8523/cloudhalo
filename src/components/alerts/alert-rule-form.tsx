@@ -18,15 +18,13 @@ import { Bell, DollarSign, TrendingUp, Wallet, AlertTriangle } from 'lucide-reac
 const alertRuleSchema = z.object({
   tenant_id: z.string().min(1, 'Please select a tenant'),
   name: z.string().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
-  type: z.enum(['THRESHOLD', 'PERCENTAGE_SPIKE', 'BUDGET', 'ANOMALY'], {
-    required_error: 'Please select an alert type',
-  }),
+  type: z.enum(['THRESHOLD', 'PERCENTAGE_SPIKE', 'BUDGET', 'ANOMALY']),
   threshold_amount: z.number().positive().optional().nullable(),
   threshold_percent: z.number().min(0).max(100).optional().nullable(),
   notification_channels: z.object({
-    email: z.boolean().default(true),
+    email: z.boolean(),
   }),
-  status: z.enum(['active', 'paused']).default('active'),
+  status: z.enum(['active', 'paused']),
 })
 
 type AlertRuleFormData = z.infer<typeof alertRuleSchema>
@@ -70,7 +68,7 @@ export function AlertRuleForm({
   const watchedType = watch('type')
 
   const handleTypeChange = (type: string) => {
-    setSelectedType(type)
+    setSelectedType(type as 'THRESHOLD' | 'PERCENTAGE_SPIKE' | 'BUDGET' | 'ANOMALY')
     setValue('type', type as any)
   }
 
