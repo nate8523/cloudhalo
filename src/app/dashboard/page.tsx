@@ -6,6 +6,7 @@ import { ChartPlaceholder } from '@/components/ui/chart-placeholder'
 import { DollarSign, TrendingUp, AlertTriangle, Cloud } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { SyncCostsButton } from '@/components/sync-costs-button'
+import type { Database } from '@/types/database'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -42,7 +43,10 @@ export default async function DashboardPage() {
         .from('cost_snapshots')
         .select('cost_usd, resource_id')
         .eq('org_id', userData.org_id)
-        .gte('date', startOfMonth.toISOString().split('T')[0])
+        .gte('date', startOfMonth.toISOString().split('T')[0]) as {
+          data: { cost_usd: number; resource_id: string | null }[] | null
+          error: any
+        }
 
       if (costData) {
         totalCost = costData.reduce((sum, record) => sum + Number(record.cost_usd || 0), 0)
