@@ -167,7 +167,7 @@ export async function POST(
 
     const { data: insertedRecs, error: insertError } = await supabase
       .from('optimization_recommendations')
-      .insert(recommendationsToInsert)
+      .insert(recommendationsToInsert as any)
       .select()
 
     if (insertError) {
