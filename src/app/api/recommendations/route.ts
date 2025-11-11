@@ -66,7 +66,10 @@ export async function GET(request: NextRequest) {
       query = query.eq('recommendation_type', type)
     }
 
-    const { data: recommendations, error: fetchError } = await query
+    const { data: recommendations, error: fetchError } = await query as {
+      data: Database['public']['Tables']['optimization_recommendations']['Row'][] | null
+      error: any
+    }
 
     if (fetchError) {
       console.error('Failed to fetch recommendations:', fetchError)
