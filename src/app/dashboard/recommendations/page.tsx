@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { RecommendationsPageClient } from './page-client'
 import { Lightbulb } from 'lucide-react'
+import type { Database } from '@/types/database'
 
 export const metadata = {
   title: 'Optimization Recommendations | CloudHalo',
@@ -53,7 +54,15 @@ export default async function RecommendationsPage() {
         .from('optimization_recommendations')
         .select('severity, potential_monthly_savings_usd, potential_annual_savings_usd', { count: 'exact' })
         .eq('org_id', userData.org_id)
-        .eq('status', 'active')
+        .eq('status', 'active') as {
+          data: {
+            severity: string
+            potential_monthly_savings_usd: number
+            potential_annual_savings_usd: number
+          }[] | null
+          count: number | null
+          error: any
+        }
 
       stats.totalRecommendations = count || 0
 
