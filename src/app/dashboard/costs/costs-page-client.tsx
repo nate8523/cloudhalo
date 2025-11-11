@@ -20,7 +20,10 @@ interface CostSnapshot {
   cost_usd: number
   service_category: string | null
   resource_name: string | null
+  resource_type: string | null
+  resource_group: string | null
   location: string | null
+  subscription_id: string
 }
 
 interface CostsPageClientProps {
