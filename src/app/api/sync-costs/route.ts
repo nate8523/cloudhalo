@@ -35,7 +35,7 @@ export async function POST() {
       .from('azure_tenants')
       .select('id')
       .eq('org_id', userData.org_id)
-      .eq('connection_status', 'connected')
+      .eq('connection_status', 'connected') as { data: { id: string }[] | null; error: any }
 
     if (tenantsError) {
       console.error('[SYNC] Error fetching tenants:', tenantsError)
