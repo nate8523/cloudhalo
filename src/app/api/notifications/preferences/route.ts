@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
         .update(updateData)
         .eq('org_id', userData.org_id)
         .select()
-        .single()
+        .single<NotificationPreferences>()
 
       if (error) throw error
       result = data
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
         .from('notification_preferences')
         .insert(insertData)
         .select()
-        .single()
+        .single<NotificationPreferences>()
 
       if (error) throw error
       result = data
@@ -285,7 +285,7 @@ export async function PATCH(request: NextRequest) {
       .update(updateData)
       .eq('org_id', userData.org_id)
       .select()
-      .single()
+      .single<NotificationPreferences>()
 
     if (error) throw error
 
