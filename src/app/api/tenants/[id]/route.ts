@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { encryptAzureClientSecret, decryptAzureClientSecret } from '@/lib/encryption/vault'
+import { encryptAzureClientSecret } from '@/lib/encryption/vault'
 import type { Database } from '@/types/database'
 
 interface RouteContext {
@@ -11,7 +11,10 @@ interface RouteContext {
 
 /**
  * GET /api/tenants/[id]
- * Fetch a specific tenant's details with decrypted credentials
+ * Fetch a specific tenant's details
+ *
+ * SECURITY: Azure client secrets are NEVER decrypted and sent to the client.
+ * They are only decrypted server-side when making Azure API calls.
  */
 export async function GET(
   request: NextRequest,
@@ -60,22 +63,11 @@ export async function GET(
       )
     }
 
-    // Decrypt the client secret before returning
-    let decryptedSecret: string
-    try {
-      decryptedSecret = await decryptAzureClientSecret(tenant.azure_client_secret)
-    } catch (decryptError: any) {
-      console.error('Failed to decrypt client secret:', decryptError)
-      // Return tenant but mask the secret if decryption fails
-      return NextResponse.json({
-        ...tenant,
-        azure_client_secret: '********' // Masked
-      })
-    }
-
+    // SECURITY FIX: Never send decrypted secrets to the client
+    // Always mask the azure_client_secret field
     return NextResponse.json({
       ...tenant,
-      azure_client_secret: decryptedSecret
+      azure_client_secret: '********'
     })
 
   } catch (error: any) {

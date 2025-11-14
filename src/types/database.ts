@@ -730,12 +730,121 @@ export interface Database {
           updated_at?: string
         }
       }
+      notification_preferences: {
+        Row: {
+          id: string
+          org_id: string
+          quiet_hours_enabled: boolean
+          quiet_hours_start: string
+          quiet_hours_end: string
+          quiet_hours_timezone: string
+          digest_mode_enabled: boolean
+          digest_frequency: 'daily' | 'weekly' | 'immediate'
+          digest_delivery_time: string
+          digest_delivery_day: number | null
+          digest_delivery_timezone: string
+          critical_alerts_bypass_quiet_hours: boolean
+          high_alerts_bypass_quiet_hours: boolean
+          include_resolved_alerts: boolean
+          include_recommendations: boolean
+          include_cost_summary: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          quiet_hours_enabled?: boolean
+          quiet_hours_start?: string
+          quiet_hours_end?: string
+          quiet_hours_timezone?: string
+          digest_mode_enabled?: boolean
+          digest_frequency?: 'daily' | 'weekly' | 'immediate'
+          digest_delivery_time?: string
+          digest_delivery_day?: number | null
+          digest_delivery_timezone?: string
+          critical_alerts_bypass_quiet_hours?: boolean
+          high_alerts_bypass_quiet_hours?: boolean
+          include_resolved_alerts?: boolean
+          include_recommendations?: boolean
+          include_cost_summary?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          quiet_hours_enabled?: boolean
+          quiet_hours_start?: string
+          quiet_hours_end?: string
+          quiet_hours_timezone?: string
+          digest_mode_enabled?: boolean
+          digest_frequency?: 'daily' | 'weekly' | 'immediate'
+          digest_delivery_time?: string
+          digest_delivery_day?: number | null
+          digest_delivery_timezone?: string
+          critical_alerts_bypass_quiet_hours?: boolean
+          high_alerts_bypass_quiet_hours?: boolean
+          include_resolved_alerts?: boolean
+          include_recommendations?: boolean
+          include_cost_summary?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      alert_digest_queue: {
+        Row: {
+          id: string
+          org_id: string
+          alert_history_id: string
+          scheduled_for: string
+          included_in_digest_at: string | null
+          digest_batch_id: string | null
+          alert_title: string
+          alert_severity: string
+          tenant_name: string
+          current_cost: number | null
+          triggered_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          alert_history_id: string
+          scheduled_for: string
+          included_in_digest_at?: string | null
+          digest_batch_id?: string | null
+          alert_title: string
+          alert_severity: string
+          tenant_name: string
+          current_cost?: number | null
+          triggered_at: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          alert_history_id?: string
+          scheduled_for?: string
+          included_in_digest_at?: string | null
+          digest_batch_id?: string | null
+          alert_title?: string
+          alert_severity?: string
+          tenant_name?: string
+          current_cost?: number | null
+          triggered_at?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_next_digest_time: {
+        Args: { p_org_id: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

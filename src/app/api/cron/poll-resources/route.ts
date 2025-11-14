@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ClientSecretCredential } from '@azure/identity'
 import { decryptAzureClientSecret } from '@/lib/encryption/vault'
+import { rateLimiters, applyRateLimit, constantTimeCompare, verifyCronIPWhitelist, verifyCronHmacSignature } from '@/lib/rate-limit'
 
 /**
  * Vercel Cron Job: Poll Azure resources for all tenants
@@ -12,7 +13,24 @@ import { decryptAzureClientSecret } from '@/lib/encryption/vault'
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify the request is from Vercel Cron
+    // Defense-in-depth security layers for cron endpoints:
+
+    // 1. Verify IP whitelist first (optional but recommended)
+    const ipCheckResult = await verifyCronIPWhitelist(request)
+    if (ipCheckResult) return ipCheckResult
+
+    // 2. Apply IP-based rate limiting (10 attempts per hour per IP)
+    const rateLimitResult = await applyRateLimit(request, rateLimiters.cron, 'ip')
+    if (rateLimitResult) {
+      console.error('[CRON] Rate limit exceeded for IP:', request.headers.get('x-forwarded-for'))
+      return rateLimitResult
+    }
+
+    // 3. Verify HMAC signature (prevents replay attacks)
+    const hmacCheckResult = await verifyCronHmacSignature(request)
+    if (hmacCheckResult) return hmacCheckResult
+
+    // 4. Verify Bearer token (defense in depth)
     const authHeader = request.headers.get('authorization')
     const cronSecret = process.env.CRON_SECRET
 
@@ -24,8 +42,19 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      console.error('[CRON] Unauthorized cron request')
+    // Use constant-time comparison to prevent timing attacks
+    const expectedAuth = `Bearer ${cronSecret}`
+    if (!constantTimeCompare(authHeader || '', expectedAuth)) {
+      // Log suspicious activity for monitoring
+      console.error('[CRON] Unauthorized cron request:', {
+        ip: request.headers.get('x-forwarded-for'),
+        timestamp: new Date().toISOString(),
+        userAgent: request.headers.get('user-agent'),
+      })
+
+      // Add delay before responding to slow down brute force attempts
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

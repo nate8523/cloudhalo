@@ -1,4 +1,5 @@
 import { sendAlertEmail } from '../email/send-alert'
+import { shouldQueueForDigest, queueAlertForDigest, type AlertForDigest } from '../digest/queue-manager'
 
 interface AlertRule {
   id: string
@@ -301,6 +302,8 @@ async function createAlertEvent(
         top_resources: topResources,
       },
       triggered_at: new Date().toISOString(),
+      sent_immediately: false, // Will be updated if sent
+      queued_for_digest: false, // Will be updated if queued
     })
     .select()
     .single()
@@ -312,9 +315,47 @@ async function createAlertEvent(
 
   console.log(`[ALERTS] ✓ Created alert: ${alertTitle}`)
 
-  // Send notifications
-  if (rule.notification_channels?.email) {
-    await sendEmailNotification(rule, alertEvent, alertData, supabase)
+  // Check if should queue for digest or send immediately
+  const tenantName = (rule as any).azure_tenants?.name || 'Unknown Tenant'
+
+  const { shouldQueue, scheduledFor, reason } = await shouldQueueForDigest(
+    supabase,
+    rule.org_id,
+    severity
+  )
+
+  if (shouldQueue && scheduledFor) {
+    console.log(`[ALERTS] Queuing alert for digest (reason: ${reason})`)
+
+    const alertForDigest: AlertForDigest = {
+      id: alertEvent.id,
+      org_id: rule.org_id,
+      alert_rule_id: rule.id,
+      tenant_id: rule.tenant_id,
+      tenant_name: tenantName,
+      severity,
+      title: alertTitle,
+      message: alertMessage,
+      current_value: currentCost,
+      threshold_value: thresholdValue,
+      triggered_at: alertEvent.triggered_at,
+      metadata: alertEvent.metadata,
+    }
+
+    await queueAlertForDigest(supabase, alertForDigest, scheduledFor)
+  } else {
+    console.log(`[ALERTS] Sending alert immediately (reason: ${reason})`)
+
+    // Mark as sent immediately
+    await supabase
+      .from('alert_history')
+      .update({ sent_immediately: true })
+      .eq('id', alertEvent.id)
+
+    // Send notifications
+    if (rule.notification_channels?.email) {
+      await sendEmailNotification(rule, alertEvent, alertData, supabase)
+    }
   }
 }
 

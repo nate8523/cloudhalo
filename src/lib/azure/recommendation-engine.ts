@@ -295,6 +295,164 @@ export function detectUnusedPublicIPs(
 }
 
 /**
+ * Reserved Instance (RI) pricing estimates for common VM sizes
+ * Savings percentages based on 1-year and 3-year commitments
+ */
+const RI_SAVINGS_DATA: Record<string, { oneYear: number; threeYear: number }> = {
+  // B-Series (Burstable)
+  'Standard_B1s': { oneYear: 0.31, threeYear: 0.49 },
+  'Standard_B1ms': { oneYear: 0.31, threeYear: 0.49 },
+  'Standard_B2s': { oneYear: 0.31, threeYear: 0.49 },
+  'Standard_B2ms': { oneYear: 0.31, threeYear: 0.49 },
+  'Standard_B4ms': { oneYear: 0.31, threeYear: 0.49 },
+
+  // D-Series (General Purpose)
+  'Standard_D2s_v3': { oneYear: 0.38, threeYear: 0.62 },
+  'Standard_D4s_v3': { oneYear: 0.38, threeYear: 0.62 },
+  'Standard_D8s_v3': { oneYear: 0.38, threeYear: 0.62 },
+  'Standard_D16s_v3': { oneYear: 0.38, threeYear: 0.62 },
+  'Standard_D32s_v3': { oneYear: 0.38, threeYear: 0.62 },
+  'Standard_D2_v3': { oneYear: 0.38, threeYear: 0.62 },
+  'Standard_D4_v3': { oneYear: 0.38, threeYear: 0.62 },
+
+  // D-Series v4 and v5
+  'Standard_D2s_v4': { oneYear: 0.40, threeYear: 0.65 },
+  'Standard_D4s_v4': { oneYear: 0.40, threeYear: 0.65 },
+  'Standard_D8s_v4': { oneYear: 0.40, threeYear: 0.65 },
+  'Standard_D2s_v5': { oneYear: 0.42, threeYear: 0.67 },
+  'Standard_D4s_v5': { oneYear: 0.42, threeYear: 0.67 },
+
+  // E-Series (Memory Optimized)
+  'Standard_E2s_v3': { oneYear: 0.38, threeYear: 0.62 },
+  'Standard_E4s_v3': { oneYear: 0.38, threeYear: 0.62 },
+  'Standard_E8s_v3': { oneYear: 0.38, threeYear: 0.62 },
+  'Standard_E16s_v3': { oneYear: 0.38, threeYear: 0.62 },
+  'Standard_E32s_v3': { oneYear: 0.38, threeYear: 0.62 },
+
+  // F-Series (Compute Optimized)
+  'Standard_F2s_v2': { oneYear: 0.38, threeYear: 0.62 },
+  'Standard_F4s_v2': { oneYear: 0.38, threeYear: 0.62 },
+  'Standard_F8s_v2': { oneYear: 0.38, threeYear: 0.62 },
+  'Standard_F16s_v2': { oneYear: 0.38, threeYear: 0.62 },
+
+  // Default for unknown VM sizes
+  'default': { oneYear: 0.35, threeYear: 0.60 },
+}
+
+/**
+ * Detects VMs that would benefit from Reserved Instances
+ * Criteria:
+ * - VM has been running consistently (high uptime)
+ * - VM has significant monthly costs
+ * - VM is in a running/available state
+ */
+export function detectReservedInstanceOpportunities(
+  resources: AzureResource[],
+  costData: CostSnapshot[]
+): ResourceRecommendation[] {
+  const recommendations: ResourceRecommendation[] = []
+
+  const vms = resources.filter(
+    (r) =>
+      r.resource_type === 'Microsoft.Compute/virtualMachines' ||
+      r.resource_type === 'microsoft.compute/virtualmachines'
+  )
+
+  for (const vm of vms) {
+    // Only recommend RI for running VMs
+    const powerState = vm.power_state?.toLowerCase() || ''
+    const isRunning = powerState.includes('running') || powerState === 'powerstate/running'
+
+    if (!isRunning) {
+      continue // Skip stopped/deallocated VMs
+    }
+
+    // Calculate costs for this VM
+    const resourceCosts = costData.filter(
+      (c) => c.resource_id === vm.resource_id
+    )
+
+    const last30DaysCost = calculateLast30DaysCost(resourceCosts)
+    const last90DaysCost = calculateLast90DaysCost(resourceCosts)
+
+    // Calculate average daily cost to determine uptime consistency
+    const last30DaysCount = Math.min(30, costData.filter(c => {
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      return c.resource_id === vm.resource_id && new Date(c.date) >= thirtyDaysAgo
+    }).length)
+
+    const avgDailyCost = last30DaysCount > 0 ? last30DaysCost / last30DaysCount : 0
+
+    // Estimate uptime percentage based on cost consistency
+    // If daily costs are consistent, uptime is high
+    const costVariance = calculateCostVariance(resourceCosts)
+    const estimatedUptimePercent = costVariance < 0.3 ? 95 : costVariance < 0.5 ? 75 : 50
+
+    // Only recommend RI if:
+    // 1. Monthly cost is at least $20 (makes RI worthwhile)
+    // 2. Uptime is consistently high (>70%)
+    // 3. Has at least 30 days of cost history
+    const monthlyEstimate = last30DaysCost > 0 ? last30DaysCost : 0
+
+    if (monthlyEstimate < 20 || estimatedUptimePercent < 70 || last30DaysCount < 15) {
+      continue
+    }
+
+    // Get VM size/SKU for RI savings calculation
+    const vmSize = vm.sku || 'default'
+    const riSavings = RI_SAVINGS_DATA[vmSize] || RI_SAVINGS_DATA['default']
+
+    // Calculate potential savings
+    // 1-year RI is recommended as the sweet spot for most customers
+    const oneYearSavingsPercent = riSavings.oneYear
+    const threeYearSavingsPercent = riSavings.threeYear
+
+    const oneYearMonthlySavings = monthlyEstimate * oneYearSavingsPercent
+    const threeYearMonthlySavings = monthlyEstimate * threeYearSavingsPercent
+
+    // Calculate payback period (months to recoup upfront cost)
+    // RI typically requires upfront or partial upfront payment
+    const estimatedUpfrontCost = monthlyEstimate * 12 * (1 - oneYearSavingsPercent)
+    const monthsToPayback = estimatedUpfrontCost / oneYearMonthlySavings
+
+    recommendations.push({
+      recommendation_type: 'reserved_instance',
+      severity: determineSeverity(oneYearMonthlySavings),
+      title: `Reserved Instance Opportunity: ${vm.resource_name}`,
+      description: `This VM has been running consistently with ${estimatedUptimePercent}% uptime and costs approximately $${monthlyEstimate.toFixed(2)}/month. Purchasing a 1-year Reserved Instance could save ${(oneYearSavingsPercent * 100).toFixed(0)}% ($${oneYearMonthlySavings.toFixed(2)}/month), or a 3-year RI could save ${(threeYearSavingsPercent * 100).toFixed(0)}% ($${threeYearMonthlySavings.toFixed(2)}/month).`,
+      resource_id: vm.resource_id,
+      resource_name: vm.resource_name,
+      resource_type: vm.resource_type,
+      resource_group: vm.resource_group,
+      location: vm.location,
+      current_monthly_cost_usd: monthlyEstimate,
+      potential_monthly_savings_usd: oneYearMonthlySavings, // Use 1-year as default
+      potential_annual_savings_usd: oneYearMonthlySavings * 12,
+      metrics: {
+        vm_size: vmSize,
+        power_state: vm.power_state,
+        estimated_uptime_percent: estimatedUptimePercent,
+        last_30_days_cost: last30DaysCost,
+        last_90_days_cost: last90DaysCost,
+        one_year_savings_percent: oneYearSavingsPercent * 100,
+        three_year_savings_percent: threeYearSavingsPercent * 100,
+        one_year_monthly_savings: oneYearMonthlySavings,
+        three_year_monthly_savings: threeYearMonthlySavings,
+        one_year_annual_savings: oneYearMonthlySavings * 12,
+        three_year_annual_savings: threeYearMonthlySavings * 12,
+        estimated_payback_months: Math.ceil(monthsToPayback),
+        cost_variance: costVariance,
+      },
+      suggested_action: `Purchase a 1-year Reserved Instance for this ${vmSize} VM in ${vm.location || 'the current region'}. This will lock in savings of approximately $${oneYearMonthlySavings.toFixed(2)}/month (${(oneYearSavingsPercent * 100).toFixed(0)}% off pay-as-you-go). For longer-term commitments, consider a 3-year RI for ${(threeYearSavingsPercent * 100).toFixed(0)}% savings.`,
+      implementation_effort: 'medium', // Requires purchasing and monitoring commitment
+    })
+  }
+
+  return recommendations
+}
+
+/**
  * Main recommendation engine - generates all recommendations
  */
 export function generateRecommendations(
@@ -307,6 +465,7 @@ export function generateRecommendations(
   allRecommendations.push(...detectIdleVMs(resources, costData))
   allRecommendations.push(...detectUnusedDisks(resources, costData))
   allRecommendations.push(...detectUnusedPublicIPs(resources, costData))
+  allRecommendations.push(...detectReservedInstanceOpportunities(resources, costData))
   allRecommendations.push(...detectUntaggedResources(resources))
 
   // Sort by potential savings (highest first)
@@ -328,6 +487,54 @@ function calculateLast30DaysCost(costSnapshots: CostSnapshot[]): number {
   )
 
   return recentCosts.reduce((sum, c) => sum + c.cost_usd, 0)
+}
+
+/**
+ * Helper: Calculate cost for last 90 days
+ */
+function calculateLast90DaysCost(costSnapshots: CostSnapshot[]): number {
+  const ninetyDaysAgo = new Date()
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+
+  const recentCosts = costSnapshots.filter(
+    (c) => new Date(c.date) >= ninetyDaysAgo
+  )
+
+  return recentCosts.reduce((sum, c) => sum + c.cost_usd, 0)
+}
+
+/**
+ * Helper: Calculate cost variance (coefficient of variation)
+ * Used to determine consistency of resource usage
+ * Lower variance = more consistent usage = better RI candidate
+ */
+function calculateCostVariance(costSnapshots: CostSnapshot[]): number {
+  if (costSnapshots.length < 7) return 1.0 // Not enough data, assume high variance
+
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  const recentCosts = costSnapshots
+    .filter((c) => new Date(c.date) >= thirtyDaysAgo)
+    .map((c) => c.cost_usd)
+
+  if (recentCosts.length === 0) return 1.0
+
+  // Calculate mean
+  const mean = recentCosts.reduce((sum, cost) => sum + cost, 0) / recentCosts.length
+
+  if (mean === 0) return 1.0
+
+  // Calculate standard deviation
+  const squaredDiffs = recentCosts.map((cost) => Math.pow(cost - mean, 2))
+  const variance = squaredDiffs.reduce((sum, diff) => sum + diff, 0) / recentCosts.length
+  const stdDev = Math.sqrt(variance)
+
+  // Coefficient of variation (CV) = stdDev / mean
+  // CV < 0.3 = low variance (consistent)
+  // CV 0.3-0.5 = medium variance
+  // CV > 0.5 = high variance (inconsistent)
+  return stdDev / mean
 }
 
 /**

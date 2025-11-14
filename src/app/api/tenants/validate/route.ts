@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 import { ClientSecretCredential } from '@azure/identity'
+import { rateLimiters, applyRateLimit } from '@/lib/rate-limit'
 
 /**
  * POST /api/tenants/validate
  *
  * Validates Azure service principal credentials by attempting to list subscriptions.
  * This endpoint is called before storing credentials to ensure they work.
+ *
+ * SECURITY:
+ * - Requires authentication to prevent abuse of Azure credential testing
+ * - Rate limited to 5 validations per hour per user to prevent brute force
  *
  * PRD Reference: Lines 277-281 (FR-1.2: Tenant Connection Flow)
  *
@@ -31,6 +37,40 @@ import { ClientSecretCredential } from '@azure/identity'
  */
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY FIX: Authenticate user before allowing credential validation
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Apply rate limiting (5 validations per hour per user)
+    const rateLimitResult = await applyRateLimit(
+      request,
+      rateLimiters.credentialValidation,
+      'user',
+      user.id
+    )
+    if (rateLimitResult) return rateLimitResult
+
+    // Verify user has an organization
+    const { data: userData } = await supabase
+      .from('users')
+      .select('org_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!userData?.org_id) {
+      return NextResponse.json(
+        { error: 'Organization not found' },
+        { status: 404 }
+      )
+    }
+
     const body = await request.json()
     const { tenantId, clientId, clientSecret } = body
 

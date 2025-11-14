@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ClientSecretCredential } from '@azure/identity'
 import { decryptAzureClientSecret } from '@/lib/encryption/vault'
+import { rateLimiters, applyRateLimit } from '@/lib/rate-limit'
 
 interface RouteContext {
   params: Promise<{
@@ -26,6 +27,15 @@ export async function POST(
         { status: 401 }
       )
     }
+
+    // Apply rate limiting for expensive Azure sync operations (10 per 5 minutes per user)
+    const rateLimitResult = await applyRateLimit(
+      request,
+      rateLimiters.expensiveOperations,
+      'user',
+      user.id
+    )
+    if (rateLimitResult) return rateLimitResult
 
     // Get user's organization
     const { data: userData } = await supabase

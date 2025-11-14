@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeCsvValue } from '@/lib/utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -207,7 +208,7 @@ async function exportSingleResourceWithCosts(
         escapeCsvField(resource.resource_type),
         escapeCsvField(resource.resource_group),
         escapeCsvField(resource.location || ''),
-        cost.cost_usd.toFixed(2),
+        escapeCsvField(cost.cost_usd.toFixed(2)),
         escapeCsvField(resource.sku || ''),
         escapeCsvField(resource.provisioning_state || '')
       ]
@@ -216,12 +217,12 @@ async function exportSingleResourceWithCosts(
   } else {
     // If no cost data, export just the resource info
     const row = [
-      'N/A',
+      escapeCsvField('N/A'),
       escapeCsvField(resource.resource_name),
       escapeCsvField(resource.resource_type),
       escapeCsvField(resource.resource_group),
       escapeCsvField(resource.location || ''),
-      '0.00',
+      escapeCsvField('0.00'),
       escapeCsvField(resource.sku || ''),
       escapeCsvField(resource.provisioning_state || '')
     ]
@@ -244,23 +245,34 @@ async function exportSingleResourceWithCosts(
 }
 
 /**
- * Escape CSV field value
- * - Wrap in quotes if contains comma, newline, or quote
- * - Escape quotes by doubling them
+ * Escape CSV field value with security sanitization
+ *
+ * Defense-in-depth approach:
+ * 1. Sanitize against CSV Formula Injection (OWASP vulnerability)
+ * 2. Apply standard CSV escaping (commas, quotes, newlines)
+ *
+ * @param value - The value to escape (string, number, null, or undefined)
+ * @returns Properly escaped and sanitized CSV field value
  */
-function escapeCsvField(value: string): string {
-  if (!value) return ''
+function escapeCsvField(value: string | number | null | undefined): string {
+  // Step 1: Sanitize against CSV Formula Injection
+  // This prevents values starting with =, +, -, @, tab, \r from executing as formulas
+  const sanitized = sanitizeCsvValue(value)
 
-  // Convert to string and trim
-  const stringValue = String(value).trim()
+  // Empty values don't need further escaping
+  if (!sanitized) return ''
 
-  // Check if field needs quoting
+  // Step 2: Apply standard CSV escaping
+  // Trim whitespace
+  const stringValue = sanitized.trim()
+
+  // Check if field needs quoting (contains special CSV characters)
   const needsQuoting = stringValue.includes(',') ||
                        stringValue.includes('\n') ||
                        stringValue.includes('"')
 
   if (needsQuoting) {
-    // Escape quotes by doubling them
+    // Escape quotes by doubling them (RFC 4180 standard)
     const escaped = stringValue.replace(/"/g, '""')
     return `"${escaped}"`
   }

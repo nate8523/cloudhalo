@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Dialog,
   DialogContent,
@@ -15,10 +16,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { User, Mail, Lock, Trash2, Upload, Camera, Loader2 } from 'lucide-react'
+import { User, Mail, Lock, Trash2, Upload, Camera, Loader2, Bell } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { NotificationChannelsForm } from '@/components/settings/notification-channels-form'
 
 interface UserProfile {
   id: string
@@ -291,8 +293,21 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* Profile Section */}
-      <Card variant="premium" className="overflow-hidden">
+      <Tabs defaultValue="profile" className="space-y-6">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="profile" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Profile
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            Notifications
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profile" className="space-y-8">
+          {/* Profile Section */}
+          <Card variant="premium" className="overflow-hidden">
         <CardHeader>
           <CardTitle className="text-display-xs text-foreground">Profile</CardTitle>
           <CardDescription className="text-body-sm text-muted-foreground">
@@ -607,6 +622,57 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications" className="space-y-6">
+          <Card variant="premium" className="overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-display-xs text-foreground">Notification Channels</CardTitle>
+              <CardDescription className="text-body-sm text-muted-foreground">
+                Configure where you receive cost alerts. Email notifications are always enabled.
+                Add Microsoft Teams or Slack to receive alerts in your team channels.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <NotificationChannelsForm />
+            </CardContent>
+          </Card>
+
+          <Card variant="premium" className="overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-body-lg text-foreground">How it works</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3 text-body-sm text-muted-foreground">
+                <li className="flex gap-3">
+                  <span className="text-primary mt-0.5">•</span>
+                  <span>
+                    When creating alert rules, you can choose which channels receive notifications
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary mt-0.5">•</span>
+                  <span>
+                    Test each webhook before saving to ensure notifications are working
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary mt-0.5">•</span>
+                  <span>
+                    Webhook URLs are encrypted and stored securely in the database
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-primary mt-0.5">•</span>
+                  <span>
+                    Notifications include cost details, top resources, and direct links to CloudHalo
+                  </span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

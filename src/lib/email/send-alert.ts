@@ -1,6 +1,14 @@
 import { resend, FROM_EMAIL } from './resend'
 import { generateAlertEmailHTML, generateAlertEmailText } from './templates'
 
+/**
+ * Sanitizes text for email subject lines by removing newlines and control characters
+ * to prevent email header injection attacks.
+ */
+function sanitizeEmailSubject(text: string): string {
+  return text.replace(/[\r\n\t]/g, ' ').trim()
+}
+
 interface SendAlertEmailParams {
   to: string
   alertRuleName: string
@@ -53,7 +61,7 @@ export async function sendAlertEmail(params: SendAlertEmailParams) {
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to,
-      subject: `[${severity.toUpperCase()}] CloudHalo Alert: ${alertRuleName}`,
+      subject: `[${severity.toUpperCase()}] CloudHalo Alert: ${sanitizeEmailSubject(alertRuleName)}`,
       html,
       text,
     })

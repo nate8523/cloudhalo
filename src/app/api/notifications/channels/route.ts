@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { encryptSecret, decryptSecret } from '@/lib/encryption/vault'
+import { encryptSecret } from '@/lib/encryption/vault'
+import { rateLimiters, applyRateLimit } from '@/lib/rate-limit'
 
 /**
  * GET /api/notifications/channels
@@ -17,6 +18,15 @@ export async function GET(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Apply rate limiting (30 requests per minute per user)
+    const rateLimitResult = await applyRateLimit(
+      request,
+      rateLimiters.api,
+      'user',
+      user.id
+    )
+    if (rateLimitResult) return rateLimitResult
 
     // Get user's org_id
     const { data: userData, error: userError } = await supabase
@@ -57,18 +67,15 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Decrypt webhook URLs before returning
-    const decryptedChannels = {
+    // SECURITY FIX: Never send webhook URLs (even encrypted) to the client
+    // Only return enabled status, mask the actual URLs
+    const maskedChannels = {
       ...channels,
-      teams_webhook_url: channels.teams_webhook_url
-        ? await decryptSecret(channels.teams_webhook_url)
-        : null,
-      slack_webhook_url: channels.slack_webhook_url
-        ? await decryptSecret(channels.slack_webhook_url)
-        : null
+      teams_webhook_url: channels.teams_webhook_url ? '********' : null,
+      slack_webhook_url: channels.slack_webhook_url ? '********' : null
     }
 
-    return NextResponse.json({ data: decryptedChannels })
+    return NextResponse.json({ data: maskedChannels })
 
   } catch (error: any) {
     console.error('[API] Error in GET /api/notifications/channels:', error)
@@ -95,6 +102,15 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Apply rate limiting for webhook updates (10 per 5 minutes per user)
+    const rateLimitResult = await applyRateLimit(
+      request,
+      rateLimiters.webhook,
+      'user',
+      user.id
+    )
+    if (rateLimitResult) return rateLimitResult
+
     // Get user's org_id
     const { data: userData, error: userError } = await supabase
       .from('users')
@@ -115,11 +131,23 @@ export async function PUT(request: NextRequest) {
       slack_webhook_url
     } = body
 
-    // Validate Teams webhook URL if enabled
+    // SECURITY: Validate Teams webhook URL to official Microsoft domains only
+    const ALLOWED_TEAMS_DOMAINS = [
+      'https://outlook.office.com/webhook/',
+      'https://outlook.office365.com/webhook/',
+    ]
+
     if (teams_enabled && teams_webhook_url) {
-      if (!teams_webhook_url.startsWith('https://')) {
+      const isValidTeamsUrl = ALLOWED_TEAMS_DOMAINS.some(domain =>
+        teams_webhook_url.startsWith(domain)
+      )
+
+      if (!isValidTeamsUrl) {
         return NextResponse.json(
-          { error: 'Teams webhook URL must start with https://' },
+          {
+            error: 'Invalid Teams webhook URL',
+            hint: 'Must be an official Microsoft Teams webhook endpoint (outlook.office.com or outlook.office365.com)'
+          },
           { status: 400 }
         )
       }
