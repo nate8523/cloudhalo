@@ -698,6 +698,38 @@ export interface Database {
           updated_at?: string
         }
       }
+      notification_channels: {
+        Row: {
+          id: string
+          org_id: string
+          teams_webhook_url: string | null
+          teams_enabled: boolean
+          slack_webhook_url: string | null
+          slack_enabled: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          teams_webhook_url?: string | null
+          teams_enabled?: boolean
+          slack_webhook_url?: string | null
+          slack_enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          teams_webhook_url?: string | null
+          teams_enabled?: boolean
+          slack_webhook_url?: string | null
+          slack_enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
