@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logSecureError, createSecureErrorResponse } from '@/lib/security/error-handler'
 
 export async function GET(
   request: NextRequest,
@@ -132,10 +133,10 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('[ResourceDetail] Error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    )
+    logSecureError('ResourceDetail', error, {
+      endpoint: 'GET /api/resources/[id]',
+      resourceId: params.id
+    })
+    return createSecureErrorResponse('Internal server error', 500)
   }
 }

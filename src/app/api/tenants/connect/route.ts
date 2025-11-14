@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ClientSecretCredential } from '@azure/identity'
 import { encryptAzureClientSecret } from '@/lib/encryption/vault'
+import { logSecureError, createSecureErrorResponse, handleAzureError } from '@/lib/security/error-handler'
 
 /**
  * POST /api/tenants/connect
@@ -48,24 +49,11 @@ export async function POST(request: NextRequest) {
       .single() as { data: { org_id: string } | null, error: any }
 
     if (userError || !userData) {
-      console.error('User organization lookup failed:', {
+      logSecureError('TenantConnect', userError || new Error('User data not found'), {
         userId: user.id,
-        userEmail: user.email,
-        error: userError,
-        hasData: !!userData
+        endpoint: 'POST /api/tenants/connect'
       })
-      return NextResponse.json(
-        {
-          error: 'User organization not found',
-          details: process.env.NODE_ENV === 'development' ? {
-            userId: user.id,
-            userEmail: user.email,
-            errorMessage: userError?.message,
-            errorCode: userError?.code
-          } : undefined
-        },
-        { status: 404 }
-      )
+      return createSecureErrorResponse('User organization not found', 404)
     }
 
     const body = await request.json()
@@ -132,11 +120,10 @@ export async function POST(request: NextRequest) {
         )
       }
     } catch (error: any) {
-      console.error('Azure credential validation failed:', error)
-      return NextResponse.json(
-        { error: 'Failed to validate Azure credentials. Please check your credentials and try again.' },
-        { status: 401 }
-      )
+      return handleAzureError('TenantConnect', error, {
+        endpoint: 'POST /api/tenants/connect',
+        tenantId: azureTenantId
+      })
     }
 
     // Encrypt client secret using application-level encryption
@@ -146,11 +133,11 @@ export async function POST(request: NextRequest) {
       encryptedSecret = await encryptAzureClientSecret(azureClientSecret, name)
       console.log('✅ Successfully encrypted Azure client secret')
     } catch (error: any) {
-      console.error('Failed to encrypt client secret:', error)
-      return NextResponse.json(
-        { error: 'Failed to securely store credentials. Please try again.' },
-        { status: 500 }
-      )
+      logSecureError('TenantConnect', error, {
+        endpoint: 'POST /api/tenants/connect',
+        operation: 'encrypt_secret'
+      })
+      return createSecureErrorResponse('Failed to securely store credentials. Please try again.', 500)
     }
 
     // Insert tenant into database with encrypted secret
@@ -187,14 +174,10 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error: any) {
-    console.error('Tenant connection error:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to connect tenant',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      },
-      { status: 500 }
-    )
+    logSecureError('TenantConnect', error, {
+      endpoint: 'POST /api/tenants/connect'
+    })
+    return createSecureErrorResponse('Failed to connect tenant', 500)
   }
 }
 
@@ -243,13 +226,9 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Fetch tenants error:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to fetch tenants',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      },
-      { status: 500 }
-    )
+    logSecureError('TenantConnect', error, {
+      endpoint: 'GET /api/tenants/connect'
+    })
+    return createSecureErrorResponse('Failed to fetch tenants', 500)
   }
 }

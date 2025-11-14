@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { logSecureError, createSecureErrorResponse } from '@/lib/security/error-handler'
 import { createClient } from '@/lib/supabase/server'
 import { sanitizeCsvValue } from '@/lib/utils'
 
@@ -143,11 +144,10 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[ResourcesExport] Error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    )
+    logSecureError('ResourcesExport', error, {
+      endpoint: 'GET /api/resources/export'
+    })
+    return createSecureErrorResponse('Internal server error', 500)
   }
 }
 

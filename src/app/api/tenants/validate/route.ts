@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ClientSecretCredential } from '@azure/identity'
 import { rateLimiters, applyRateLimit } from '@/lib/rate-limit'
+import { logSecureError, handleAzureError } from '@/lib/security/error-handler'
 
 /**
  * POST /api/tenants/validate
@@ -138,60 +139,19 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Azure credential validation error:', error)
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      statusCode: error.statusCode,
-      name: error.name,
-      stack: error.stack?.split('\n').slice(0, 3).join('\n')
+    const response = handleAzureError('TenantValidate', error, {
+      endpoint: 'POST /api/tenants/validate'
     })
 
-    // Parse Azure-specific errors
-    let errorMessage = 'Invalid credentials or insufficient permissions'
-    let errorHint = ''
-
-    if (error.message?.includes('AADSTS')) {
-      // Azure AD authentication errors
-      if (error.message.includes('AADSTS700016')) {
-        errorMessage = 'Invalid application (client) ID'
-        errorHint = 'Check that your Application (client) ID is correct in Azure Portal > App registrations'
-      } else if (error.message.includes('AADSTS7000215')) {
-        errorMessage = 'Invalid client secret'
-        errorHint = 'The client secret may be expired or incorrect. Generate a new one in Azure Portal'
-      } else if (error.message.includes('AADSTS90002')) {
-        errorMessage = 'Invalid tenant ID'
-        errorHint = 'Check that your Directory (tenant) ID is correct in Azure Portal'
-      } else if (error.message.includes('AADSTS50057')) {
-        errorMessage = 'Account is disabled or deleted'
-        errorHint = 'The service principal may have been disabled in Azure AD'
-      } else {
-        errorMessage = 'Azure AD authentication failed'
-        errorHint = 'Please verify your credentials in Azure Portal > App registrations'
-      }
-    } else if (error.message?.includes('timeout')) {
-      errorMessage = 'Azure API timeout. Please try again.'
-      errorHint = 'The connection to Azure timed out. Check your internet connection.'
-    } else if (error.statusCode === 403 || error.code === 'AuthorizationFailed') {
-      errorMessage = 'Insufficient permissions'
-      errorHint = 'Service principal needs Reader role at subscription level. Add in Azure Portal > Subscriptions > Access control (IAM)'
-    } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
-      errorMessage = 'Network error connecting to Azure'
-      errorHint = 'Check your internet connection and firewall settings'
-    }
-
+    // Convert to validation response format
+    const responseBody = await response.json()
     return NextResponse.json(
       {
         valid: false,
-        error: errorMessage,
-        hint: errorHint,
-        details: process.env.NODE_ENV === 'development' ? {
-          message: error.message,
-          code: error.code,
-          statusCode: error.statusCode
-        } : undefined
+        error: responseBody.error,
+        hint: responseBody.hint
       },
-      { status: 401 }
+      { status: response.status }
     )
   }
 }

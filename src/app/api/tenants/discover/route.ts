@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ClientSecretCredential } from '@azure/identity'
 import { SubscriptionClient } from '@azure/arm-subscriptions'
 import { decryptAzureClientSecret } from '@/lib/encryption/vault'
+import { logSecureError, createSecureErrorResponse, handleAzureError } from '@/lib/security/error-handler'
 
 /**
  * POST /api/tenants/discover
@@ -70,11 +71,12 @@ export async function POST(request: NextRequest) {
     try {
       clientSecret = await decryptAzureClientSecret(tenant.azure_client_secret)
     } catch (error: any) {
-      console.error('Failed to decrypt client secret:', error)
-      return NextResponse.json(
-        { error: 'Failed to retrieve credentials. Please reconnect this tenant.' },
-        { status: 500 }
-      )
+      logSecureError('TenantDiscover', error, {
+        endpoint: 'POST /api/tenants/discover',
+        tenantId,
+        operation: 'decrypt_secret'
+      })
+      return createSecureErrorResponse('Failed to retrieve credentials. Please reconnect this tenant.', 500)
     }
 
     // Create Azure credential
@@ -174,14 +176,10 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Subscription discovery error:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to discover subscriptions',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      },
-      { status: 500 }
-    )
+    logSecureError('TenantDiscover', error, {
+      endpoint: 'POST /api/tenants/discover'
+    })
+    return createSecureErrorResponse('Failed to discover subscriptions', 500)
   }
 }
 
@@ -241,13 +239,9 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Fetch subscriptions error:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to fetch subscriptions',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      },
-      { status: 500 }
-    )
+    logSecureError('TenantDiscover', error, {
+      endpoint: 'GET /api/tenants/discover'
+    })
+    return createSecureErrorResponse('Failed to fetch subscriptions', 500)
   }
 }

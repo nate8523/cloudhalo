@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { testSlackWebhook } from '@/lib/notifications/slack'
+import { logSecureError, createSecureErrorResponse } from '@/lib/security/error-handler'
 
 /**
  * POST /api/notifications/test-slack
@@ -60,13 +61,9 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error: any) {
-    console.error('[API] Error testing Slack webhook:', error)
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        details: error.message
-      },
-      { status: 500 }
-    )
+    logSecureError('TestSlackWebhook', error, {
+      endpoint: 'POST /api/notifications/test-slack'
+    })
+    return createSecureErrorResponse('Internal server error', 500)
   }
 }

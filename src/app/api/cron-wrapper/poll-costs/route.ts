@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyCronIPWhitelist } from '@/lib/rate-limit'
 import { generateHmacSignature } from '@/lib/security/hmac'
+import { logSecureError, createSecureErrorResponse } from '@/lib/security/error-handler'
 
 export async function GET(request: NextRequest) {
   // 1. Verify request is from Vercel Cron IP (if configured)
@@ -53,10 +54,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data)
   } catch (error: any) {
-    console.error('[Cron Wrapper] Request failed:', error)
-    return NextResponse.json(
-      { error: 'Failed to execute cron job', details: error.message },
-      { status: 500 }
-    )
+    logSecureError('CronWrapper:PollCosts', error, {
+      endpoint: 'GET /api/cron-wrapper/poll-costs'
+    })
+    return createSecureErrorResponse('Failed to execute cron job', 500)
   }
 }

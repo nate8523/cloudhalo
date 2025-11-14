@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logSecureError, createSecureErrorResponse } from '@/lib/security/error-handler'
 import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -62,14 +63,10 @@ export async function GET(
 
     return NextResponse.json({ report })
   } catch (error) {
-    console.error('Error fetching scheduled report:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to fetch scheduled report',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
+    logSecureError('ScheduledReport', error, {
+      endpoint: 'GET /api/reports/scheduled/[id]'
+    })
+    return createSecureErrorResponse('Failed to fetch scheduled report', 500)
   }
 }
 
@@ -184,14 +181,10 @@ export async function PUT(
 
     return NextResponse.json({ report: updatedReport })
   } catch (error) {
-    console.error('Error updating scheduled report:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to update scheduled report',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
+    logSecureError('ScheduledReport', error, {
+      endpoint: 'PUT /api/reports/scheduled/[id]'
+    })
+    return createSecureErrorResponse('Failed to update scheduled report', 500)
   }
 }
 
@@ -244,13 +237,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting scheduled report:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to delete scheduled report',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
+    logSecureError('ScheduledReport', error, {
+      endpoint: 'DELETE /api/reports/scheduled/[id]'
+    })
+    return createSecureErrorResponse('Failed to delete scheduled report', 500)
   }
 }

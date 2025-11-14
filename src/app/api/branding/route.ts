@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logSecureError, createSecureErrorResponse, handleDatabaseError } from '@/lib/security/error-handler'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,10 +42,10 @@ export async function GET(request: NextRequest) {
 
     if (brandingError && brandingError.code !== 'PGRST116') {
       // PGRST116 is "not found" error - that's ok
-      return NextResponse.json(
-        { error: 'Failed to fetch branding', details: brandingError.message },
-        { status: 500 }
-      )
+      return handleDatabaseError('Branding', brandingError, {
+        endpoint: 'GET /api/branding',
+        orgId: (userData as any).org_id
+      })
     }
 
     // Return empty branding if not configured yet
@@ -61,14 +62,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ branding })
   } catch (error) {
-    console.error('Error fetching branding:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to fetch branding',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
+    logSecureError('Branding', error, {
+      endpoint: 'GET /api/branding'
+    })
+    return createSecureErrorResponse('Failed to fetch branding', 500)
   }
 }
 
@@ -146,10 +143,10 @@ export async function PUT(request: NextRequest) {
         .single()
 
       if (error) {
-        return NextResponse.json(
-          { error: 'Failed to update branding', details: error.message },
-          { status: 500 }
-        )
+        return handleDatabaseError('Branding', error, {
+          endpoint: 'PUT /api/branding',
+          operation: 'update'
+        })
       }
 
       result = data
@@ -167,10 +164,10 @@ export async function PUT(request: NextRequest) {
         .single()
 
       if (error) {
-        return NextResponse.json(
-          { error: 'Failed to create branding', details: error.message },
-          { status: 500 }
-        )
+        return handleDatabaseError('Branding', error, {
+          endpoint: 'PUT /api/branding',
+          operation: 'create'
+        })
       }
 
       result = data
@@ -178,13 +175,9 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ branding: result })
   } catch (error) {
-    console.error('Error updating branding:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to update branding',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
+    logSecureError('Branding', error, {
+      endpoint: 'PUT /api/branding'
+    })
+    return createSecureErrorResponse('Failed to update branding', 500)
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { encryptSecret } from '@/lib/encryption/vault'
 import { rateLimiters, applyRateLimit } from '@/lib/rate-limit'
+import { logSecureError, createSecureErrorResponse } from '@/lib/security/error-handler'
 
 /**
  * GET /api/notifications/channels
@@ -78,11 +79,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: maskedChannels })
 
   } catch (error: any) {
-    console.error('[API] Error in GET /api/notifications/channels:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
-    )
+    logSecureError('NotificationChannels', error, {
+      endpoint: 'GET /api/notifications/channels'
+    })
+    return createSecureErrorResponse('Internal server error', 500)
   }
 }
 
@@ -228,10 +228,9 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('[API] Error in PUT /api/notifications/channels:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
-    )
+    logSecureError('NotificationChannels', error, {
+      endpoint: 'PUT /api/notifications/channels'
+    })
+    return createSecureErrorResponse('Internal server error', 500)
   }
 }

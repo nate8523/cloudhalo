@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logSecureError, createSecureErrorResponse } from '@/lib/security/error-handler'
 import { createClient } from '@/lib/supabase/server'
 import { generateCostReportPDF } from '@/lib/pdf/generator'
 
@@ -123,13 +124,9 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error generating PDF report:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to generate report',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
+    logSecureError('ReportExport', error, {
+      endpoint: 'GET /api/reports/export'
+    })
+    return createSecureErrorResponse('Failed to generate report', 500)
   }
 }

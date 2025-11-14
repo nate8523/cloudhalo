@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logSecureError, createSecureErrorResponse } from '@/lib/security/error-handler'
 import { createClient } from '@/lib/supabase/server'
 import { generateCostReportPDF } from '@/lib/pdf/generator'
 import { Resend } from 'resend'
@@ -224,14 +225,10 @@ export async function POST(request: NextRequest) {
       reportResults: results,
     })
   } catch (error) {
-    console.error('Error in send-reports cron:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to process scheduled reports and digests',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
+    logSecureError('Cron:SendReports', error, {
+      endpoint: 'GET /api/cron/send-reports'
+    })
+    return createSecureErrorResponse('Failed to process scheduled reports and digests', 500)
   }
 }
 
