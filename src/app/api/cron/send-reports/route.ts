@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
     const digestResults = await processAlertDigests(supabase)
 
     // Get all enabled scheduled reports
-    const { data: reports, error: reportsError } = await supabase
-      .from('scheduled_reports')
+    const { data: reports, error: reportsError } = await (supabase
+      .from('scheduled_reports') as any)
       .select(
         `
         *,
@@ -139,15 +139,15 @@ export async function POST(request: NextRequest) {
         const { startDate, endDate } = getDateRange((report as any).frequency)
 
         // Fetch organization branding
-        const { data: branding } = await supabase
-          .from('organization_branding')
+        const { data: branding } = await (supabase
+          .from('organization_branding') as any)
           .select('logo_url, primary_color, company_name')
           .eq('org_id', (report as any).azure_tenants.org_id)
           .single()
 
         // Fetch cost data
-        const { data: costData, error: costError } = await supabase
-          .from('cost_snapshots')
+        const { data: costData, error: costError } = await (supabase
+          .from('cost_snapshots') as any)
           .select(
             'date, cost_usd, service_category, resource_name, resource_type, location'
           )
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Calculate total cost
-        const totalCost = costData?.reduce((sum, row) => sum + (row as any).cost_usd, 0) || 0
+        const totalCost = costData?.reduce((sum: number, row: any) => sum + (row as any).cost_usd, 0) || 0
 
         // Generate PDF
         const pdfBuffer = await generateCostReportPDF({
@@ -248,8 +248,8 @@ async function processAlertDigests(supabase: any) {
     console.log('[Digest] Starting digest processing...')
 
     // Get all organizations
-    const { data: orgs, error: orgsError } = await supabase
-      .from('organizations')
+    const { data: orgs, error: orgsError } = await (supabase
+      .from('organizations') as any)
       .select('id, name')
 
     if (orgsError) {
@@ -271,8 +271,8 @@ async function processAlertDigests(supabase: any) {
         results.processed++
 
         // Fetch notification preferences for this org
-        const { data: orgPrefs, error: prefsError } = await supabase
-          .from('notification_preferences')
+        const { data: orgPrefs, error: prefsError } = await (supabase
+          .from('notification_preferences') as any)
           .select('*')
           .eq('org_id', (org as any).id)
           .single()
@@ -318,8 +318,8 @@ async function processAlertDigests(supabase: any) {
           recipients = orgPrefs.digest_recipients
         } else {
           // Fallback to organization users
-          const { data: users } = await supabase
-            .from('users')
+          const { data: users } = await (supabase
+            .from('users') as any)
             .select('email')
             .eq('org_id', (org as any).id)
           recipients = users?.map((u: any) => u.email).filter(Boolean) || []

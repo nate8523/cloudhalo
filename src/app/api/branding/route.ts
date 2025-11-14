@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's org_id
-    const { data: userData, error: userError } = await supabase
-      .from('users')
+    const { data: userData, error: userError } = await (supabase
+      .from('users') as any)
       .select('org_id')
       .eq('id', user.id)
       .single()
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch branding configuration
-    const { data: branding, error: brandingError } = await supabase
-      .from('organization_branding')
+    const { data: branding, error: brandingError } = await (supabase
+      .from('organization_branding') as any)
       .select('*')
       .eq('org_id', (userData as any).org_id)
       .single()
@@ -88,8 +88,8 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get user's org_id and verify admin role
-    const { data: userData, error: userError } = await supabase
-      .from('users')
+    const { data: userData, error: userError } = await (supabase
+      .from('users') as any)
       .select('org_id, role')
       .eq('id', user.id)
       .single()
@@ -119,8 +119,8 @@ export async function PUT(request: NextRequest) {
     }
 
     // Check if branding exists
-    const { data: existingBranding } = await supabase
-      .from('organization_branding')
+    const { data: existingBranding } = await (supabase
+      .from('organization_branding') as any)
       .select('id')
       .eq('org_id', (userData as any).org_id)
       .single()
@@ -152,8 +152,8 @@ export async function PUT(request: NextRequest) {
       result = data
     } else {
       // Create new branding
-      const { data, error } = await supabase
-        .from('organization_branding')
+      const { data, error } = await (supabase
+        .from('organization_branding') as any)
         .insert({
           org_id: (userData as any).org_id,
           logo_url,

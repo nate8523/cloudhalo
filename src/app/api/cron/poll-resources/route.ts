@@ -67,8 +67,8 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient() as any
 
     // Fetch all active Azure tenants
-    const { data: tenants, error: tenantsError} = await supabase
-      .from('azure_tenants')
+    const { data: tenants, error: tenantsError} = await (supabase
+      .from('azure_tenants') as any)
       .select('id, org_id, display_name, azure_tenant_id, azure_app_id, azure_client_secret, connection_status, last_sync_at')
       .eq('connection_status', 'connected')
 

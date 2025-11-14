@@ -68,8 +68,8 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient() as any
 
     // Fetch all active Azure tenants
-    const { data: tenants, error: tenantsError } = await supabase
-      .from('azure_tenants')
+    const { data: tenants, error: tenantsError } = await (supabase
+      .from('azure_tenants') as any)
       .select('id, org_id, display_name, azure_tenant_id, azure_app_id, azure_client_secret, connection_status, last_sync_at')
       .eq('connection_status', 'connected')
 
@@ -238,8 +238,8 @@ export async function GET(request: NextRequest) {
               }
 
               if (costs.length > 0) {
-                const { error: costError } = await supabase
-                  .from('cost_snapshots')
+                const { error: costError } = await (supabase
+                  .from('cost_snapshots') as any)
                   .upsert(costs as any, {
                     onConflict: 'tenant_id,subscription_id,resource_id,date',
                     ignoreDuplicates: false
@@ -260,7 +260,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Update tenant last sync time
-        await supabase
+        const supabaseClient: any = supabase
+        await supabaseClient
           .from('azure_tenants')
           .update({
             last_sync_at: new Date().toISOString()
@@ -280,7 +281,8 @@ export async function GET(request: NextRequest) {
         })
 
         // Update tenant with error status
-        await supabase
+        const supabaseClientError: any = supabase
+        await supabaseClientError
           .from('azure_tenants')
           .update({
             connection_status: 'failed',

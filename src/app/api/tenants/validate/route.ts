@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
     if (rateLimitResult) return rateLimitResult
 
     // Verify user has an organization
-    const { data: userData } = await supabase
-      .from('users')
+    const { data: userData } = await (supabase
+      .from('users') as any)
       .select('org_id')
       .eq('id', user.id)
       .single()

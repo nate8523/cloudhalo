@@ -38,8 +38,8 @@ export async function shouldQueueForDigest(
   reason: string
 }> {
   // Fetch notification preferences for the organization
-  const { data: prefs, error } = await supabase
-    .from('notification_preferences')
+  const { data: prefs, error } = await (supabase
+    .from('notification_preferences') as any)
     .select('*')
     .eq('org_id', orgId)
     .single()
@@ -133,8 +133,8 @@ export async function queueAlertForDigest(
       triggered_at: alert.triggered_at,
     }
 
-    const { error } = await supabase
-      .from('alert_digest_queue')
+    const { error } = await (supabase
+      .from('alert_digest_queue') as any)
       .insert(queueEntry)
 
     if (error) {
@@ -143,7 +143,8 @@ export async function queueAlertForDigest(
     }
 
     // Mark alert as queued
-    await supabase
+    const supabaseClient: any = supabase
+    await supabaseClient
       .from('alert_history')
       .update({ queued_for_digest: true })
       .eq('id', alert.id)
@@ -166,8 +167,8 @@ export async function getPendingDigestItems(
 ): Promise<AlertForDigest[]> {
   const now = new Date().toISOString()
 
-  const { data: queueItems, error } = await supabase
-    .from('alert_digest_queue')
+  const { data: queueItems, error } = await (supabase
+    .from('alert_digest_queue') as any)
     .select(`
       *,
       alert_history:alert_history_id (
@@ -199,8 +200,8 @@ export async function getPendingDigestItems(
 
   // Map to AlertForDigest format
   const alerts: AlertForDigest[] = queueItems
-    .filter(item => item.alert_history)
-    .map(item => ({
+    .filter((item: any) => item.alert_history)
+    .map((item: any) => ({
       id: (item.alert_history as any).id,
       org_id: (item.alert_history as any).org_id,
       alert_rule_id: (item.alert_history as any).alert_rule_id,
@@ -227,7 +228,8 @@ export async function markDigestItemsSent(
   batchId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabase
+    const supabaseClient: any = supabase
+    const { error } = await supabaseClient
       .from('alert_digest_queue')
       .update({
         included_in_digest_at: new Date().toISOString(),
@@ -296,7 +298,7 @@ async function calculateNextDigestTime(
 ): Promise<string | null> {
   try {
     // Use the database function to calculate next digest time
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .rpc('calculate_next_digest_time', { p_org_id: orgId })
 
     if (error) {

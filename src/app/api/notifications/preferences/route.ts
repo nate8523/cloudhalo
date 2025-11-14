@@ -21,19 +21,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's org_id
-    const { data: userData, error: userError } = await supabase
-      .from('users')
+    const { data: userData, error: userError } = await (supabase
+      .from('users') as any)
       .select('org_id')
       .eq('id', user.id)
-      .single<{ org_id: string }>()
+      .single()
 
     if (userError || !userData?.org_id) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
     // Fetch notification preferences
-    const { data: preferences, error: prefsError } = await supabase
-      .from('notification_preferences')
+    const { data: preferences, error: prefsError } = await (supabase
+      .from('notification_preferences') as any)
       .select('*')
       .eq('org_id', userData.org_id)
       .single()
@@ -86,11 +86,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's org_id
-    const { data: userData, error: userError } = await supabase
-      .from('users')
+    const { data: userData, error: userError } = await (supabase
+      .from('users') as any)
       .select('org_id')
       .eq('id', user.id)
-      .single<{ org_id: string }>()
+      .single()
 
     if (userError || !userData?.org_id) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
@@ -140,8 +140,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if preferences already exist
-    const { data: existingPrefs } = await supabase
-      .from('notification_preferences')
+    const { data: existingPrefs } = await (supabase
+      .from('notification_preferences') as any)
       .select('id')
       .eq('org_id', userData.org_id)
       .single()
@@ -168,12 +168,13 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
       }
 
-      const { data, error } = await supabase
+      const supabaseClient: any = supabase
+      const { data, error } = await supabaseClient
         .from('notification_preferences')
         .update(updateData)
         .eq('org_id', userData.org_id)
         .select()
-        .single<NotificationPreferences>()
+        .single()
 
       if (error) throw error
       result = data
@@ -197,11 +198,12 @@ export async function POST(request: NextRequest) {
         include_cost_summary: body.include_cost_summary,
       }
 
-      const { data, error } = await supabase
+      const supabaseClientInsert: any = supabase
+      const { data, error } = await supabaseClientInsert
         .from('notification_preferences')
         .insert(insertData)
         .select()
-        .single<NotificationPreferences>()
+        .single()
 
       if (error) throw error
       result = data
@@ -237,11 +239,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Get user's org_id
-    const { data: userData, error: userError } = await supabase
-      .from('users')
+    const { data: userData, error: userError } = await (supabase
+      .from('users') as any)
       .select('org_id')
       .eq('id', user.id)
-      .single<{ org_id: string }>()
+      .single()
 
     if (userError || !userData?.org_id) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
@@ -280,12 +282,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update preferences
-    const { data, error } = await supabase
+    const supabaseClient: any = supabase
+    const { data, error } = await supabaseClient
       .from('notification_preferences')
       .update(updateData)
       .eq('org_id', userData.org_id)
       .select()
-      .single<NotificationPreferences>()
+      .single()
 
     if (error) throw error
 

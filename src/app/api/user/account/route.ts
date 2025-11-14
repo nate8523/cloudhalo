@@ -13,11 +13,11 @@ export async function DELETE() {
     }
 
     // Get user's org_id
-    const { data: userData, error: userError } = await supabase
-      .from('users')
+    const { data: userData, error: userError } = await (supabase
+      .from('users') as any)
       .select('org_id, avatar_url')
       .eq('id', user.id)
-      .single<Pick<Database['public']['Tables']['users']['Row'], 'org_id' | 'avatar_url'>>()
+      .single()
 
     if (userError || !userData) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -41,8 +41,8 @@ export async function DELETE() {
     // For azure_tenants, cost_snapshots, alert_rules - these should be org-scoped
 
     // Delete user from users table
-    const { error: deleteUserError } = await supabase
-      .from('users')
+    const { error: deleteUserError } = await (supabase
+      .from('users') as any)
       .delete()
       .eq('id', user.id)
 

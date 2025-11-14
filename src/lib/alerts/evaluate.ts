@@ -347,7 +347,8 @@ async function createAlertEvent(
     console.log(`[ALERTS] Sending alert immediately (reason: ${reason})`)
 
     // Mark as sent immediately
-    await supabase
+    const supabaseClient: any = supabase
+    await supabaseClient
       .from('alert_history')
       .update({ sent_immediately: true })
       .eq('id', alertEvent.id)
