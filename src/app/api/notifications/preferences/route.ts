@@ -146,33 +146,31 @@ export async function POST(request: NextRequest) {
       .eq('org_id', userData.org_id)
       .single()
 
-    const preferencesData: NotificationPreferencesUpdate = {
-      org_id: userData.org_id,
-      quiet_hours_enabled: body.quiet_hours_enabled,
-      quiet_hours_start: body.quiet_hours_start,
-      quiet_hours_end: body.quiet_hours_end,
-      quiet_hours_timezone: body.quiet_hours_timezone,
-      digest_mode_enabled: body.digest_mode_enabled,
-      digest_frequency: body.digest_frequency,
-      digest_delivery_time: body.digest_delivery_time,
-      digest_delivery_day: body.digest_delivery_day,
-      digest_delivery_timezone: body.digest_delivery_timezone,
-      critical_alerts_bypass_quiet_hours: body.critical_alerts_bypass_quiet_hours,
-      high_alerts_bypass_quiet_hours: body.high_alerts_bypass_quiet_hours,
-      include_resolved_alerts: body.include_resolved_alerts,
-      include_recommendations: body.include_recommendations,
-      include_cost_summary: body.include_cost_summary,
-      updated_at: new Date().toISOString(),
-    }
-
     let result
 
     if (existingPrefs) {
       // Update existing preferences
+      const updateData: NotificationPreferencesUpdate = {
+        quiet_hours_enabled: body.quiet_hours_enabled,
+        quiet_hours_start: body.quiet_hours_start,
+        quiet_hours_end: body.quiet_hours_end,
+        quiet_hours_timezone: body.quiet_hours_timezone,
+        digest_mode_enabled: body.digest_mode_enabled,
+        digest_frequency: body.digest_frequency,
+        digest_delivery_time: body.digest_delivery_time,
+        digest_delivery_day: body.digest_delivery_day,
+        digest_delivery_timezone: body.digest_delivery_timezone,
+        critical_alerts_bypass_quiet_hours: body.critical_alerts_bypass_quiet_hours,
+        high_alerts_bypass_quiet_hours: body.high_alerts_bypass_quiet_hours,
+        include_resolved_alerts: body.include_resolved_alerts,
+        include_recommendations: body.include_recommendations,
+        include_cost_summary: body.include_cost_summary,
+        updated_at: new Date().toISOString(),
+      }
+
       const { data, error } = await supabase
         .from('notification_preferences')
-        // @ts-expect-error - Supabase type inference issue with notification_preferences table
-        .update(preferencesData)
+        .update(updateData)
         .eq('org_id', userData.org_id)
         .select()
         .single()
@@ -181,9 +179,27 @@ export async function POST(request: NextRequest) {
       result = data
     } else {
       // Insert new preferences
+      const insertData: NotificationPreferencesInsert = {
+        org_id: userData.org_id,
+        quiet_hours_enabled: body.quiet_hours_enabled,
+        quiet_hours_start: body.quiet_hours_start,
+        quiet_hours_end: body.quiet_hours_end,
+        quiet_hours_timezone: body.quiet_hours_timezone,
+        digest_mode_enabled: body.digest_mode_enabled,
+        digest_frequency: body.digest_frequency,
+        digest_delivery_time: body.digest_delivery_time,
+        digest_delivery_day: body.digest_delivery_day,
+        digest_delivery_timezone: body.digest_delivery_timezone,
+        critical_alerts_bypass_quiet_hours: body.critical_alerts_bypass_quiet_hours,
+        high_alerts_bypass_quiet_hours: body.high_alerts_bypass_quiet_hours,
+        include_resolved_alerts: body.include_resolved_alerts,
+        include_recommendations: body.include_recommendations,
+        include_cost_summary: body.include_cost_summary,
+      }
+
       const { data, error } = await supabase
         .from('notification_preferences')
-        .insert(preferencesData as NotificationPreferencesInsert)
+        .insert(insertData)
         .select()
         .single()
 
