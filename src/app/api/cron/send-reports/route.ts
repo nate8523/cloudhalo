@@ -6,7 +6,7 @@ import { Resend } from 'resend'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300 // 5 minutes for processing multiple reports
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = new Resend(process.env.RESEND_API_KEY || 're_placeholder_for_build')
 
 /**
  * POST /api/cron/send-reports

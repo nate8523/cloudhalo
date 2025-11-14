@@ -1,9 +1,8 @@
 import { Resend } from 'resend'
 
-if (!process.env.RESEND_API_KEY) {
-  throw new Error('RESEND_API_KEY is not set in environment variables')
-}
+// Use a placeholder during build time if API key is not set
+const apiKey = process.env.RESEND_API_KEY || 're_placeholder_for_build'
 
-export const resend = new Resend(process.env.RESEND_API_KEY)
+export const resend = new Resend(apiKey)
 
 export const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'CloudHalo <alerts@cloudhalo.app>'

@@ -10,7 +10,7 @@ import { encryptSecret, decryptSecret } from '@/lib/encryption/vault'
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = await createClient() as any
 
     // Authenticate user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = await createClient() as any
 
     // Authenticate user
     const { data: { user }, error: authError } = await supabase.auth.getUser()

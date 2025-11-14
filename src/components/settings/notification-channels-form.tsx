@@ -12,9 +12,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 
 const formSchema = z.object({
-  teams_enabled: z.boolean().default(false),
+  teams_enabled: z.boolean(),
   teams_webhook_url: z.string().optional(),
-  slack_enabled: z.boolean().default(false),
+  slack_enabled: z.boolean(),
   slack_webhook_url: z.string().optional(),
 }).refine((data) => {
   // If Teams is enabled, webhook URL is required

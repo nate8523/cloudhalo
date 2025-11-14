@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ClientSecretCredential } from '@azure/identity'
 import { decryptAzureClientSecret } from '@/lib/encryption/vault'
+import type { Database } from '@/types/database'
 
 /**
  * Vercel Cron Job: Poll Azure costs for all tenants
@@ -35,12 +36,12 @@ export async function GET(request: NextRequest) {
     console.log('[CRON] Starting cost polling job...')
 
     // Create Supabase client with service role for background job
-    const supabase = await createClient()
+    const supabase = await createClient() as any
 
     // Fetch all active Azure tenants
     const { data: tenants, error: tenantsError } = await supabase
       .from('azure_tenants')
-      .select('*')
+      .select('id, org_id, display_name, azure_tenant_id, azure_app_id, azure_client_secret, connection_status, last_sync_at')
       .eq('connection_status', 'connected')
 
     if (tenantsError) {
@@ -60,10 +61,22 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    console.log(`[CRON] Found ${tenants.length} active tenant(s) to sync`)
+    // Type assertion - we know tenants exists and has length > 0 at this point
+    const activeTenants = tenants as Array<{
+      id: string
+      org_id: string
+      display_name: string | null
+      azure_tenant_id: string
+      azure_app_id: string
+      azure_client_secret: string
+      connection_status: string
+      last_sync_at: string | null
+    }>
+
+    console.log(`[CRON] Found ${activeTenants.length} active tenant(s) to sync`)
 
     const results = {
-      total: tenants.length,
+      total: activeTenants.length,
       successful: 0,
       failed: 0,
       errors: [] as Array<{ tenantId: string; error: string }>,
@@ -71,7 +84,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Process each tenant
-    for (const tenant of tenants) {
+    for (const tenant of activeTenants) {
       try {
         console.log(`[CRON] Processing tenant ${tenant.id} (${tenant.display_name})`)
 

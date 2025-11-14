@@ -164,23 +164,34 @@ async function sendWithRetry(
  */
 async function sendEmailNotification(
   data: AlertNotificationData,
-  addresses?: string[]
+  addresses?: string[],
+  alertId?: string
 ): Promise<NotificationResult> {
   try {
     // Import email sender dynamically to avoid circular dependencies
-    const { sendAlertEmail } = await import('../email/alerts')
+    const { sendAlertEmail } = await import('../email/send-alert')
+
+    // Send to each address (email API expects single recipient)
+    const emailAddress = addresses && addresses.length > 0 ? addresses[0] : ''
+
+    if (!emailAddress) {
+      return {
+        channel: 'email',
+        success: false,
+        error: 'No email address provided'
+      }
+    }
 
     await sendAlertEmail({
-      to: addresses || [],
+      to: emailAddress,
+      alertRuleName: data.alertName,
       tenantName: data.tenantName,
-      alertName: data.alertName,
       severity: data.severity,
       currentCost: data.currentCost,
-      previousCost: data.previousCost,
-      costDelta: data.costDelta,
+      thresholdValue: data.previousCost, // Using previous cost as threshold reference
       percentChange: data.percentChange,
-      topResources: data.topResources,
-      alertUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudhalo.app'}/dashboard/alerts`
+      topResources: data.topResources?.map(r => ({ name: r.name, cost: r.cost })),
+      alertId: alertId || data.alertRuleId
     })
 
     return {
