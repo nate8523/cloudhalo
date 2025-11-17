@@ -7,17 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -27,7 +18,6 @@ import {
 } from '@/components/ui/select'
 import { ArrowLeft, Loader2, Send } from 'lucide-react'
 import Link from 'next/link'
-import { toast } from 'sonner'
 
 const featureRequestSchema = z.object({
   title: z.string().min(10, 'Title must be at least 10 characters').max(200, 'Title must be less than 200 characters'),
@@ -42,18 +32,27 @@ type FeatureRequestFormValues = z.infer<typeof featureRequestSchema>
 export default function NewFeatureRequestPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
 
-  const form = useForm<FeatureRequestFormValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+  } = useForm<FeatureRequestFormValues>({
     resolver: zodResolver(featureRequestSchema),
     defaultValues: {
       title: '',
       description: '',
-      category: undefined,
+      category: 'other',
     },
   })
 
   const onSubmit = async (data: FeatureRequestFormValues) => {
     setIsSubmitting(true)
+    setError(null)
     try {
       const res = await fetch('/api/feature-requests', {
         method: 'POST',
@@ -68,11 +67,13 @@ export default function NewFeatureRequestPage() {
         throw new Error(error.error || 'Failed to submit feature request')
       }
 
-      toast.success('Feature request submitted successfully!')
-      router.push('/dashboard/feature-requests')
+      setSuccess(true)
+      setTimeout(() => {
+        router.push('/dashboard/feature-requests')
+      }, 1500)
     } catch (error) {
       console.error('Error submitting feature request:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to submit feature request')
+      setError(error instanceof Error ? error.message : 'Failed to submit feature request')
     } finally {
       setIsSubmitting(false)
     }
@@ -132,106 +133,101 @@ export default function NewFeatureRequestPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Title */}
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Feature Title</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., AWS Cost Monitoring Integration"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        A clear, concise title that describes the feature
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+            {success && (
+              <div className="mb-4 p-4 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-md">
+                Feature request submitted successfully! Redirecting...
+              </div>
+            )}
+            {error && (
+              <div className="mb-4 p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-md">
+                {error}
+              </div>
+            )}
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {/* Title */}
+              <div className="space-y-2">
+                <Label htmlFor="title">Feature Title</Label>
+                <Input
+                  id="title"
+                  placeholder="e.g., AWS Cost Monitoring Integration"
+                  {...register('title')}
                 />
+                {errors.title && (
+                  <p className="text-sm text-red-500">{errors.title.message}</p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  A clear, concise title that describes the feature
+                </p>
+              </div>
 
-                {/* Category */}
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {categories.map((category) => (
-                            <SelectItem key={category.value} value={category.value}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{category.label}</span>
-                                <span className="text-xs text-muted-foreground">{category.description}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Choose the category that best fits your request
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              {/* Category */}
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select
+                  onValueChange={(value) => setValue('category', value as any)}
+                  defaultValue={watch('category')}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{category.label}</span>
+                          <span className="text-xs text-muted-foreground">{category.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.category && (
+                  <p className="text-sm text-red-500">{errors.category.message}</p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Choose the category that best fits your request
+                </p>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <textarea
+                  id="description"
+                  placeholder="Describe your feature request in detail. Include:&#10;- What problem does it solve?&#10;- How would it work?&#10;- Why is it valuable?&#10;- Any examples or use cases?"
+                  className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  {...register('description')}
                 />
+                {errors.description && (
+                  <p className="text-sm text-red-500">{errors.description.message}</p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Provide a detailed description of the feature (50-2000 characters)
+                </p>
+              </div>
 
-                {/* Description */}
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Describe your feature request in detail. Include:&#10;- What problem does it solve?&#10;- How would it work?&#10;- Why is it valuable?&#10;- Any examples or use cases?"
-                          className="min-h-[200px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Provide a detailed description of the feature (50-2000 characters)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Submit Button */}
-                <div className="flex gap-4 justify-end">
-                  <Link href="/dashboard/feature-requests">
-                    <Button type="button" variant="outline">
-                      Cancel
-                    </Button>
-                  </Link>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="mr-2 h-4 w-4" />
-                        Submit Request
-                      </>
-                    )}
+              {/* Submit Button */}
+              <div className="flex gap-4 justify-end">
+                <Link href="/dashboard/feature-requests">
+                  <Button type="button" variant="outline" disabled={isSubmitting}>
+                    Cancel
                   </Button>
-                </div>
-              </form>
-            </Form>
+                </Link>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Submit Request
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
 

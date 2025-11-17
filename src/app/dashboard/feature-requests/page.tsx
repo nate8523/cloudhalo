@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -17,13 +15,14 @@ type FeatureRequest = Database['public']['Tables']['feature_requests']['Row'] & 
 
 export default function FeatureRequestsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const queryClient = useQueryClient()
-  const supabase = createClient()
+  const [features, setFeatures] = useState<FeatureRequest[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [votingFeatureId, setVotingFeatureId] = useState<string | null>(null)
 
   // Fetch feature requests
-  const { data: features, isLoading } = useQuery({
-    queryKey: ['feature-requests', selectedCategory],
-    queryFn: async () => {
+  const fetchFeatures = async () => {
+    setIsLoading(true)
+    try {
       const url = new URL('/api/feature-requests', window.location.origin)
       if (selectedCategory) {
         url.searchParams.set('category', selectedCategory)
@@ -32,24 +31,38 @@ export default function FeatureRequestsPage() {
       const res = await fetch(url.toString())
       if (!res.ok) throw new Error('Failed to fetch feature requests')
       const json = await res.json()
-      return json.data as FeatureRequest[]
-    },
-  })
+      setFeatures(json.data as FeatureRequest[])
+    } catch (error) {
+      console.error('Error fetching features:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-  // Vote mutation
-  const voteMutation = useMutation({
-    mutationFn: async ({ featureId, hasVoted }: { featureId: string; hasVoted: boolean }) => {
+  // Vote handler
+  const handleVote = async (featureId: string, hasVoted: boolean) => {
+    setVotingFeatureId(featureId)
+    try {
       const method = hasVoted ? 'DELETE' : 'POST'
       const res = await fetch(`/api/feature-requests/${featureId}/vote`, {
         method,
       })
       if (!res.ok) throw new Error('Failed to update vote')
-      return res.json()
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['feature-requests'] })
-    },
-  })
+
+      // Refresh features after voting
+      await fetchFeatures()
+    } catch (error) {
+      console.error('Error voting:', error)
+    } finally {
+      setVotingFeatureId(null)
+    }
+  }
+
+  // Fetch on mount and when category changes
+  useEffect(() => {
+    fetchFeatures()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory])
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { variant: 'default' | 'secondary' | 'outline' | 'destructive' | 'success' | 'warning' | 'info'; label: string; icon: React.ReactNode }> = {
@@ -177,13 +190,8 @@ export default function FeatureRequestsPage() {
                               <Button
                                 variant={feature.user_has_voted ? 'default' : 'outline'}
                                 size="sm"
-                                onClick={() =>
-                                  voteMutation.mutate({
-                                    featureId: feature.id,
-                                    hasVoted: feature.user_has_voted,
-                                  })
-                                }
-                                disabled={voteMutation.isPending}
+                                onClick={() => handleVote(feature.id, feature.user_has_voted)}
+                                disabled={votingFeatureId === feature.id}
                                 className="shrink-0"
                               >
                                 <ThumbsUp className={`h-4 w-4 ${feature.user_has_voted ? 'fill-current' : ''}`} />
