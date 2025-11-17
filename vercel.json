@@ -1,20 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron-wrapper/poll-costs",
-      "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron-wrapper/poll-resources",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron-wrapper/send-reports",
-      "schedule": "0 8 * * 1"
-    },
-    {
-      "path": "/api/cron-wrapper/evaluate-alerts",
-      "schedule": "0 4 * * *"
+      "path": "/api/cron-wrapper/orchestrator",
+      "schedule": "0 * * * *"
     }
   ]
 }
