@@ -181,7 +181,7 @@ async function executeTask(task: CronTask, cronSecret: string): Promise<TaskExec
     // Generate HMAC signature for the request
     const timestamp = new Date().toISOString()
     const body = task.method === 'POST' || task.method === 'PUT' ? '' : null
-    const signature = generateHmacSignature(
+    const signature = await generateHmacSignature(
       task.method,
       task.endpoint,
       timestamp,

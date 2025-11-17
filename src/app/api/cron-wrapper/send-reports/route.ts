@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
   }
 
-  const signature = generateHmacSignature(method, path, timestamp, body, cronSecret)
+  const signature = await generateHmacSignature(method, path, timestamp, body, cronSecret)
 
   // 3. Forward request to actual cron endpoint with HMAC headers
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`
