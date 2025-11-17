@@ -195,3 +195,177 @@ export async function PATCH(
     )
   }
 }
+
+/**
+ * DELETE /api/tenants/[id]
+ * Delete a tenant and purge all associated data
+ *
+ * This cascades to delete:
+ * - Cost snapshots
+ * - Resources
+ * - Recommendations
+ * - Alert history
+ * - Alert rules
+ * - The tenant record itself
+ */
+export async function DELETE(
+  request: NextRequest,
+  context: RouteContext
+) {
+  try {
+    const { id } = await context.params
+    const supabase = await createClient()
+
+    // Get authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Get user's organization
+    const { data: userData } = await (supabase
+      .from('users') as any)
+      .select('org_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!userData?.org_id) {
+      return NextResponse.json(
+        { error: 'Organization not found' },
+        { status: 404 }
+      )
+    }
+
+    // Verify tenant exists and belongs to org
+    const { data: existingTenant, error: tenantError } = await (supabase
+      .from('azure_tenants') as any)
+      .select('id, name')
+      .eq('id', id)
+      .eq('org_id', userData.org_id)
+      .single()
+
+    if (tenantError || !existingTenant) {
+      return NextResponse.json(
+        { error: 'Tenant not found or access denied' },
+        { status: 404 }
+      )
+    }
+
+    console.log(`[DELETE TENANT] Starting deletion for tenant ${id} (${existingTenant.name})`)
+
+    // Delete all related data in order (cascading delete)
+    // 1. Delete cost snapshots
+    const { error: costError } = await (supabase
+      .from('cost_snapshots') as any)
+      .delete()
+      .eq('tenant_id', id)
+      .eq('org_id', userData.org_id)
+
+    if (costError) {
+      console.error('[DELETE TENANT] Error deleting cost snapshots:', costError)
+      return NextResponse.json(
+        { error: 'Failed to delete cost data' },
+        { status: 500 }
+      )
+    }
+    console.log('[DELETE TENANT] ✓ Deleted cost snapshots')
+
+    // 2. Delete resources
+    const { error: resourceError } = await (supabase
+      .from('resources') as any)
+      .delete()
+      .eq('tenant_id', id)
+      .eq('org_id', userData.org_id)
+
+    if (resourceError) {
+      console.error('[DELETE TENANT] Error deleting resources:', resourceError)
+      return NextResponse.json(
+        { error: 'Failed to delete resources' },
+        { status: 500 }
+      )
+    }
+    console.log('[DELETE TENANT] ✓ Deleted resources')
+
+    // 3. Delete recommendations
+    const { error: recError } = await (supabase
+      .from('recommendations') as any)
+      .delete()
+      .eq('tenant_id', id)
+      .eq('org_id', userData.org_id)
+
+    if (recError) {
+      console.error('[DELETE TENANT] Error deleting recommendations:', recError)
+      return NextResponse.json(
+        { error: 'Failed to delete recommendations' },
+        { status: 500 }
+      )
+    }
+    console.log('[DELETE TENANT] ✓ Deleted recommendations')
+
+    // 4. Delete alert history
+    const { error: alertHistoryError } = await (supabase
+      .from('alert_history') as any)
+      .delete()
+      .eq('tenant_id', id)
+      .eq('org_id', userData.org_id)
+
+    if (alertHistoryError) {
+      console.error('[DELETE TENANT] Error deleting alert history:', alertHistoryError)
+      return NextResponse.json(
+        { error: 'Failed to delete alert history' },
+        { status: 500 }
+      )
+    }
+    console.log('[DELETE TENANT] ✓ Deleted alert history')
+
+    // 5. Delete alert rules for this tenant
+    const { error: alertRulesError } = await (supabase
+      .from('alert_rules') as any)
+      .delete()
+      .eq('tenant_id', id)
+      .eq('org_id', userData.org_id)
+
+    if (alertRulesError) {
+      console.error('[DELETE TENANT] Error deleting alert rules:', alertRulesError)
+      return NextResponse.json(
+        { error: 'Failed to delete alert rules' },
+        { status: 500 }
+      )
+    }
+    console.log('[DELETE TENANT] ✓ Deleted alert rules')
+
+    // 6. Finally, delete the tenant itself
+    const { error: deleteTenantError } = await (supabase
+      .from('azure_tenants') as any)
+      .delete()
+      .eq('id', id)
+      .eq('org_id', userData.org_id)
+
+    if (deleteTenantError) {
+      console.error('[DELETE TENANT] Error deleting tenant:', deleteTenantError)
+      return NextResponse.json(
+        { error: 'Failed to delete tenant' },
+        { status: 500 }
+      )
+    }
+    console.log('[DELETE TENANT] ✓ Deleted tenant record')
+
+    console.log(`[DELETE TENANT] Successfully deleted tenant ${id} and all associated data`)
+
+    return NextResponse.json({
+      success: true,
+      message: 'Tenant and all associated data deleted successfully'
+    })
+
+  } catch (error: any) {
+    console.error('Delete tenant error:', error)
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}

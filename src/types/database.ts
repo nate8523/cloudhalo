@@ -836,6 +836,76 @@ export interface Database {
           created_at?: string
         }
       }
+      feature_requests: {
+        Row: {
+          id: string
+          org_id: string
+          user_id: string
+          title: string
+          description: string
+          category: 'integration' | 'analytics' | 'alerts' | 'ui' | 'automation' | 'other'
+          status: 'submitted' | 'under_review' | 'planned' | 'in_progress' | 'completed' | 'declined'
+          priority: 'low' | 'medium' | 'high' | 'critical'
+          estimated_delivery: string | null
+          vote_count: number
+          is_public: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          user_id: string
+          title: string
+          description: string
+          category: 'integration' | 'analytics' | 'alerts' | 'ui' | 'automation' | 'other'
+          status?: 'submitted' | 'under_review' | 'planned' | 'in_progress' | 'completed' | 'declined'
+          priority?: 'low' | 'medium' | 'high' | 'critical'
+          estimated_delivery?: string | null
+          vote_count?: number
+          is_public?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          user_id?: string
+          title?: string
+          description?: string
+          category?: 'integration' | 'analytics' | 'alerts' | 'ui' | 'automation' | 'other'
+          status?: 'submitted' | 'under_review' | 'planned' | 'in_progress' | 'completed' | 'declined'
+          priority?: 'low' | 'medium' | 'high' | 'critical'
+          estimated_delivery?: string | null
+          vote_count?: number
+          is_public?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      feature_votes: {
+        Row: {
+          id: string
+          feature_request_id: string
+          user_id: string
+          org_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          feature_request_id: string
+          user_id: string
+          org_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          feature_request_id?: string
+          user_id?: string
+          org_id?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

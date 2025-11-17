@@ -18,6 +18,7 @@ import {
   Sun,
   Package,
   Lightbulb,
+  MessageSquarePlus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -198,6 +199,34 @@ export function DashboardSidebar({ onCollapseChange }: DashboardSidebarProps) {
                   {mounted && theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                 </span>
               </button>
+              <Link
+                href="/dashboard/feature-requests"
+                className={cn(
+                  pathname.startsWith('/dashboard/feature-requests')
+                    ? 'bg-white/25 text-white font-semibold shadow-sm'
+                    : 'text-white/90 hover:bg-white/15 hover:text-white',
+                  'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-medium transition-all mb-2',
+                  collapsed && 'justify-center'
+                )}
+                title={collapsed ? "Feature Requests" : undefined}
+                aria-label="Feature Requests"
+              >
+                <MessageSquarePlus
+                  className={cn(
+                    pathname.startsWith('/dashboard/feature-requests') ? 'text-white' : 'text-white/80',
+                    'h-5 w-5 shrink-0'
+                  )}
+                  aria-hidden="true"
+                />
+                <span
+                  className={cn(
+                    "transition-all duration-300",
+                    collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+                  )}
+                >
+                  Feature Requests
+                </span>
+              </Link>
               <Link
                 href="/dashboard/settings"
                 className={cn(

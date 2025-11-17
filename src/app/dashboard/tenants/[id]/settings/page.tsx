@@ -13,7 +13,18 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Save, Loader2, Eye, EyeOff } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { ArrowLeft, Save, Loader2, Eye, EyeOff, Trash2 } from 'lucide-react'
 
 interface TenantSettingsPageProps {
   params: {
@@ -26,9 +37,11 @@ export default function TenantSettingsPage({ params }: TenantSettingsPageProps) 
   const [tenantId, setTenantId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [showSecret, setShowSecret] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   const [formData, setFormData] = useState({
     name: '',
@@ -116,6 +129,34 @@ export default function TenantSettingsPage({ params }: TenantSettingsPageProps) 
     setFormData((prev) => ({ ...prev, [field]: value }))
     setError(null)
     setSuccess(false)
+  }
+
+  const handleDelete = async () => {
+    if (deleteConfirmText !== formData.name) {
+      setError('Tenant name does not match')
+      return
+    }
+
+    setDeleting(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/tenants/${tenantId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to delete tenant')
+      }
+
+      // Redirect to tenants list after successful deletion
+      router.push('/dashboard/tenants')
+    } catch (err: any) {
+      console.error('Error deleting tenant:', err)
+      setError(err.message || 'Failed to delete tenant')
+      setDeleting(false)
+    }
   }
 
   if (loading) {
@@ -337,6 +378,102 @@ export default function TenantSettingsPage({ params }: TenantSettingsPageProps) 
             • Changes to credentials will trigger a new connection test on the
             next sync
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone - Delete Tenant */}
+      <Card
+        variant="glassmorphism"
+        className="border-destructive/20 bg-destructive/5"
+      >
+        <CardHeader>
+          <CardTitle className="text-sm text-destructive">Danger Zone</CardTitle>
+          <CardDescription>
+            Permanently delete this tenant and all associated data
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Deleting this tenant will permanently remove:
+            </p>
+            <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1 ml-2">
+              <li>All cost data and historical snapshots</li>
+              <li>All resource inventory records</li>
+              <li>All optimization recommendations</li>
+              <li>All alert history and configured alert rules</li>
+              <li>The tenant connection itself</li>
+            </ul>
+            <p className="text-sm font-semibold text-destructive mt-3">
+              ⚠️ This action cannot be undone!
+            </p>
+          </div>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="w-full sm:w-auto">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Tenant
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-3">
+                  <p>
+                    This will permanently delete the tenant{' '}
+                    <strong className="text-foreground">{formData.name}</strong>{' '}
+                    and all associated data including:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li>Cost snapshots and historical data</li>
+                    <li>Resource inventory</li>
+                    <li>Recommendations</li>
+                    <li>Alert history and rules</li>
+                  </ul>
+                  <p className="font-semibold text-destructive">
+                    This action cannot be undone.
+                  </p>
+                  <div className="mt-4">
+                    <Label htmlFor="confirm-delete">
+                      Type <strong>{formData.name}</strong> to confirm:
+                    </Label>
+                    <Input
+                      id="confirm-delete"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      placeholder="Enter tenant name"
+                      className="mt-2"
+                    />
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  onClick={() => {
+                    setDeleteConfirmText('')
+                    setError(null)
+                  }}
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  disabled={deleting || deleteConfirmText !== formData.name}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete Permanently'
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
     </div>
