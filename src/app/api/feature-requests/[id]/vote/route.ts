@@ -36,6 +36,7 @@ export async function POST(
       return createSecureErrorResponse('User organization not found', 404)
     }
 
+    const orgId = userData.org_id
     const { id: featureRequestId } = await params
 
     // Check if feature request exists
@@ -74,7 +75,7 @@ export async function POST(
       .insert({
         feature_request_id: featureRequestId,
         user_id: user.id,
-        org_id: userData.org_id
+        org_id: orgId
       } as any)
       .select()
       .single()
