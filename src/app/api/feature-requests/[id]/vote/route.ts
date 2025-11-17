@@ -36,7 +36,7 @@ export async function POST(
       return createSecureErrorResponse('User organization not found', 404)
     }
 
-    const orgId = userData.org_id
+    const orgId = (userData as { org_id: string }).org_id
     const { id: featureRequestId } = await params
 
     // Check if feature request exists
