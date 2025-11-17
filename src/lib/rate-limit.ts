@@ -297,7 +297,7 @@ export async function verifyCronHmacSignature(
   }
 
   // Verify HMAC signature
-  const verificationResult = verifyHmacSignature(
+  const verificationResult = await verifyHmacSignature(
     method,
     path,
     hmacHeaders.timestamp,

@@ -1,11 +1,11 @@
-import { createHmac, timingSafeEqual } from 'crypto'
-
 /**
  * HMAC-SHA256 Signature Utilities for Cron Job Authentication
  *
  * This module provides HMAC-based request signing to prevent replay attacks
  * and unauthorized access to cron endpoints. All signatures use HMAC-SHA256
  * and include timestamp validation to enforce a 5-minute validity window.
+ *
+ * Uses Web Crypto API for compatibility with Edge Runtime and Node.js.
  *
  * Security Features:
  * - HMAC-SHA256 signatures prevent tampering
@@ -23,7 +23,7 @@ import { createHmac, timingSafeEqual } from 'crypto'
 const MAX_TIMESTAMP_AGE_MS = 5 * 60 * 1000 // 5 minutes
 
 /**
- * Generate HMAC-SHA256 signature for a request
+ * Generate HMAC-SHA256 signature for a request using Web Crypto API
  *
  * The signature is computed from:
  * - HTTP method (GET, POST, etc.)
@@ -36,10 +36,10 @@ const MAX_TIMESTAMP_AGE_MS = 5 * 60 * 1000 // 5 minutes
  * @param timestamp - ISO 8601 timestamp
  * @param body - Optional request body as object (will be JSON.stringify'd)
  * @param secret - HMAC secret key (CRON_SECRET)
- * @returns Hex-encoded HMAC-SHA256 signature
+ * @returns Promise resolving to hex-encoded HMAC-SHA256 signature
  *
  * @example
- * const signature = generateHmacSignature(
+ * const signature = await generateHmacSignature(
  *   'GET',
  *   '/api/cron/poll-costs',
  *   new Date().toISOString(),
@@ -47,23 +47,40 @@ const MAX_TIMESTAMP_AGE_MS = 5 * 60 * 1000 // 5 minutes
  *   process.env.CRON_SECRET
  * )
  */
-export function generateHmacSignature(
+export async function generateHmacSignature(
   method: string,
   path: string,
   timestamp: string,
   body: any = null,
   secret: string
-): string {
+): Promise<string> {
   // Construct the message to sign
   // Format: METHOD:PATH:TIMESTAMP[:BODY_JSON]
   const bodyString = body ? JSON.stringify(body) : ''
   const message = `${method.toUpperCase()}:${path}:${timestamp}:${bodyString}`
 
-  // Generate HMAC-SHA256 signature
-  const hmac = createHmac('sha256', secret)
-  hmac.update(message)
+  // Convert strings to Uint8Array
+  const encoder = new TextEncoder()
+  const keyData = encoder.encode(secret)
+  const messageData = encoder.encode(message)
 
-  return hmac.digest('hex')
+  // Import the secret key for HMAC
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+
+  // Generate HMAC-SHA256 signature
+  const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData)
+
+  // Convert ArrayBuffer to hex string
+  const signatureArray = Array.from(new Uint8Array(signatureBuffer))
+  const signatureHex = signatureArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+  return signatureHex
 }
 
 /**
@@ -83,10 +100,10 @@ export function generateHmacSignature(
  * @param providedSignature - Signature from X-Cron-Signature header
  * @param body - Optional request body
  * @param secret - HMAC secret key (CRON_SECRET)
- * @returns Object with success status and optional error message
+ * @returns Promise resolving to object with success status and optional error message
  *
  * @example
- * const result = verifyHmacSignature(
+ * const result = await verifyHmacSignature(
  *   'GET',
  *   '/api/cron/poll-costs',
  *   request.headers.get('X-Cron-Timestamp'),
@@ -99,14 +116,14 @@ export function generateHmacSignature(
  *   console.error('Signature verification failed:', result.error)
  * }
  */
-export function verifyHmacSignature(
+export async function verifyHmacSignature(
   method: string,
   path: string,
   timestamp: string | null,
   providedSignature: string | null,
   body: any = null,
   secret: string
-): { success: boolean; error?: string } {
+): Promise<{ success: boolean; error?: string }> {
   // Validate required parameters
   if (!timestamp) {
     return { success: false, error: 'Missing timestamp header' }
@@ -149,7 +166,7 @@ export function verifyHmacSignature(
   }
 
   // Generate expected signature
-  const expectedSignature = generateHmacSignature(
+  const expectedSignature = await generateHmacSignature(
     method,
     path,
     timestamp,
@@ -169,8 +186,8 @@ export function verifyHmacSignature(
 /**
  * Constant-time string comparison to prevent timing attacks
  *
- * This function uses Node.js's built-in timingSafeEqual when possible,
- * or falls back to a manual constant-time comparison implementation.
+ * Uses manual constant-time comparison implementation compatible with
+ * both Node.js and Edge Runtime.
  *
  * @param a - First string to compare
  * @param b - Second string to compare
@@ -182,20 +199,12 @@ function constantTimeCompare(a: string, b: string): boolean {
     return false
   }
 
-  try {
-    // Use Node.js's timing-safe comparison when available
-    const bufferA = Buffer.from(a, 'utf8')
-    const bufferB = Buffer.from(b, 'utf8')
-
-    return timingSafeEqual(bufferA, bufferB)
-  } catch (error) {
-    // Fallback to manual constant-time comparison
-    let result = 0
-    for (let i = 0; i < a.length; i++) {
-      result |= a.charCodeAt(i) ^ b.charCodeAt(i)
-    }
-    return result === 0
+  // Manual constant-time comparison
+  let result = 0
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
   }
+  return result === 0
 }
 
 /**
