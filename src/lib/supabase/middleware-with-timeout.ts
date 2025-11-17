@@ -177,10 +177,12 @@ export async function updateSession(request: NextRequest) {
   // Only update database every 60 seconds to reduce load
   const timeSinceLastUpdate = Date.now() - sessionMetadata.lastActivityAt
   if (timeSinceLastUpdate > 60000) {
-    // Fire and forget - don't await
-    supabase.rpc('update_session_activity', {
+    // Fire and forget - don't await, but handle errors
+    const rpcCall = supabase.rpc('update_session_activity', {
       p_session_token: sessionMetadata.sessionId,
-    }).catch((error) => {
+    } as any)
+    // @ts-ignore - Type issue with Supabase RPC promise chain
+    void rpcCall.then().catch((error: any) => {
       console.error('[SESSION_TIMEOUT] Failed to update session activity:', error)
     })
   }

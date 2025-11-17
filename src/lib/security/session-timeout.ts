@@ -315,6 +315,7 @@ export async function createOrUpdateDatabaseSession(
     // Upsert session record
     const { error } = await supabase
       .from('user_sessions')
+      // @ts-ignore - TypeScript has issues inferring the generic type here
       .upsert(
         {
           user_id: userId,
@@ -366,7 +367,7 @@ export async function terminateDatabaseSession(
     const { error } = await supabase.rpc('terminate_idle_session', {
       p_session_token: sessionToken,
       p_reason: reason,
-    })
+    } as any)
 
     if (error) {
       console.error('[SESSION_TIMEOUT] Failed to terminate database session:', error.message)
