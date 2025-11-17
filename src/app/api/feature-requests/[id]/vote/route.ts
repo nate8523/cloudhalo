@@ -75,7 +75,7 @@ export async function POST(
         feature_request_id: featureRequestId,
         user_id: user.id,
         org_id: userData.org_id
-      })
+      } as any)
       .select()
       .single()
 
