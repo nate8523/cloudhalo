@@ -1,25 +1,45 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Cloud, TrendingDown, Bell, Shield, ArrowRight } from 'lucide-react'
+import { Cloud, TrendingDown, Bell, Shield, ArrowRight, Clock, AlertTriangle } from 'lucide-react'
+import { getTimeoutMessage } from '@/lib/security/session-timeout'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [timeoutMessage, setTimeoutMessage] = useState<string | null>(null)
+
+  // Check for timeout message in URL params
+  useEffect(() => {
+    const timeoutParam = searchParams.get('timeout')
+    if (timeoutParam) {
+      const message = getTimeoutMessage(
+        timeoutParam as 'session_timeout' | 'idle_timeout'
+      )
+      setTimeoutMessage(message)
+
+      // Clear timeout param from URL
+      const url = new URL(window.location.href)
+      url.searchParams.delete('timeout')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
+    setTimeoutMessage(null)
 
     const supabase = createClient()
 
@@ -135,9 +155,19 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4 sm:space-y-6">
+            {timeoutMessage && (
+              <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 px-4 py-3 rounded-lg text-sm flex items-start space-x-3">
+                <Clock className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Session Expired</p>
+                  <p className="mt-1">{timeoutMessage}</p>
+                </div>
+              </div>
+            )}
             {error && (
-              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm">
-                {error}
+              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm flex items-start space-x-3">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div>{error}</div>
               </div>
             )}
 

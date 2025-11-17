@@ -107,8 +107,8 @@ export default function FeatureRequestsPage() {
     return acc
   }, {} as Record<string, FeatureRequest[]>)
 
-  const statusOrder = ['in_progress', 'planned', 'under_review', 'submitted', 'completed', 'declined']
-  const activeStatuses = ['in_progress', 'planned', 'under_review', 'submitted']
+  const statusOrder = ['in_progress', 'planned', 'under_review', 'completed', 'declined']
+  const activeStatuses = ['in_progress', 'planned', 'under_review']
   const completedStatuses = ['completed', 'declined']
 
   return (
@@ -157,63 +157,75 @@ export default function FeatureRequestsPage() {
           <TabsTrigger value="completed">Completed & Declined</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="roadmap" className="space-y-6">
+        <TabsContent value="roadmap">
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            statusOrder
-              .filter((status) => activeStatuses.includes(status))
-              .map((status) => {
-                const featuresInStatus = groupedFeatures?.[status] || []
-                if (featuresInStatus.length === 0) return null
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {statusOrder
+                .filter((status) => activeStatuses.includes(status))
+                .map((status) => {
+                  const featuresInStatus = groupedFeatures?.[status] || []
 
-                return (
-                  <div key={status} className="space-y-4">
-                    <h2 className="text-xl font-semibold capitalize flex items-center gap-2">
-                      {status.replace('_', ' ')}
-                      <Badge variant="secondary">{featuresInStatus.length}</Badge>
-                    </h2>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {featuresInStatus.map((feature) => (
-                        <Card key={feature.id} className="hover:shadow-md transition-shadow">
-                          <CardHeader>
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 space-y-2">
-                                <CardTitle className="text-lg line-clamp-2">{feature.title}</CardTitle>
-                                <div className="flex gap-2 flex-wrap">
-                                  {getStatusBadge(feature.status)}
-                                  {getCategoryBadge(feature.category)}
+                  return (
+                    <div key={status} className="space-y-4">
+                      <div className="sticky top-0 bg-background pb-4 z-10">
+                        <h2 className="text-xl font-bold capitalize flex items-center gap-2 border-b pb-2">
+                          {status.replace('_', ' ')}
+                          <Badge variant="secondary">{featuresInStatus.length}</Badge>
+                        </h2>
+                      </div>
+                      <div className="space-y-4">
+                        {featuresInStatus.length === 0 ? (
+                          <Card className="bg-muted/50">
+                            <CardContent className="pt-6 pb-6 text-center text-muted-foreground">
+                              No features in this stage
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          featuresInStatus.map((feature) => (
+                            <Card key={feature.id} className="hover:shadow-md transition-shadow">
+                              <CardHeader>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 space-y-2">
+                                    <CardTitle className="text-base line-clamp-2">{feature.title}</CardTitle>
+                                    <div className="flex gap-2 flex-wrap">
+                                      {getCategoryBadge(feature.category)}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant={feature.user_has_voted ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => handleVote(feature.id, feature.user_has_voted)}
+                                    disabled={votingFeatureId === feature.id}
+                                    className="shrink-0"
+                                  >
+                                    <ThumbsUp className={`h-4 w-4 ${feature.user_has_voted ? 'fill-current' : ''}`} />
+                                    <span className="ml-1 text-xs">{feature.vote_count}</span>
+                                  </Button>
                                 </div>
-                              </div>
-                              <Button
-                                variant={feature.user_has_voted ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => handleVote(feature.id, feature.user_has_voted)}
-                                disabled={votingFeatureId === feature.id}
-                                className="shrink-0"
-                              >
-                                <ThumbsUp className={`h-4 w-4 ${feature.user_has_voted ? 'fill-current' : ''}`} />
-                                <span className="ml-1">{feature.vote_count}</span>
-                              </Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <CardDescription className="line-clamp-3">{feature.description}</CardDescription>
-                            {feature.estimated_delivery && (
-                              <div className="mt-4 flex items-center text-sm text-muted-foreground">
-                                <Clock className="h-4 w-4 mr-1" />
-                                Target: {feature.estimated_delivery}
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      ))}
+                              </CardHeader>
+                              <CardContent>
+                                <CardDescription className="line-clamp-3 text-sm">
+                                  {feature.description}
+                                </CardDescription>
+                                {feature.estimated_delivery && (
+                                  <div className="mt-3 flex items-center text-xs text-muted-foreground">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    {feature.estimated_delivery}
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )
-              })
+                  )
+                })}
+            </div>
           )}
         </TabsContent>
 

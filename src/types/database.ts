@@ -906,6 +906,47 @@ export interface Database {
           created_at?: string
         }
       }
+      user_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          org_id: string
+          session_token: string
+          ip_address: string | null
+          user_agent: string | null
+          created_at: string
+          last_activity_at: string
+          expires_at: string
+          terminated_at: string | null
+          termination_reason: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          org_id: string
+          session_token: string
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+          last_activity_at?: string
+          expires_at: string
+          terminated_at?: string | null
+          termination_reason?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          org_id?: string
+          session_token?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+          last_activity_at?: string
+          expires_at?: string
+          terminated_at?: string | null
+          termination_reason?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -914,6 +955,22 @@ export interface Database {
       calculate_next_digest_time: {
         Args: { p_org_id: string }
         Returns: string
+      }
+      terminate_expired_sessions: {
+        Args: Record<string, never>
+        Returns: void
+      }
+      terminate_idle_session: {
+        Args: { p_session_token: string; p_reason?: string }
+        Returns: void
+      }
+      update_session_activity: {
+        Args: { p_session_token: string }
+        Returns: void
+      }
+      cleanup_old_sessions: {
+        Args: Record<string, never>
+        Returns: void
       }
     }
     Enums: {

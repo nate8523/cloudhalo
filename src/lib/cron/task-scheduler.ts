@@ -87,6 +87,16 @@ export const CRON_TASKS: CronTask[] = [
     enabled: true,
     maxDuration: 300, // 5 minutes
   },
+  {
+    id: 'cleanup-sessions',
+    name: 'Cleanup Expired Sessions',
+    description: 'Terminates expired sessions and cleans up old session records for audit compliance',
+    schedule: '0 */1 * * *', // Every hour
+    endpoint: '/api/cron/cleanup-sessions',
+    method: 'GET',
+    enabled: true,
+    maxDuration: 60, // 1 minute
+  },
 ]
 
 /**
