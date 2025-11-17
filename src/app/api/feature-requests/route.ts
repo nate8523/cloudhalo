@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Add user's vote status to each feature
-    const featuresWithVoteStatus = featureRequests?.map(feature => ({
+    const featuresWithVoteStatus = (featureRequests || []).map((feature: any) => ({
       ...feature,
       user_has_voted: feature.user_votes?.some((vote: { user_id: string }) => vote.user_id === user.id) || false,
       user_votes: undefined // Remove votes array from response
