@@ -114,6 +114,8 @@ export async function POST(request: NextRequest) {
       return createSecureErrorResponse('User organization not found', 404)
     }
 
+    const orgId = (userData as { org_id: string }).org_id
+
     // Parse request body
     const body = await request.json()
     const { title, description, category } = body
@@ -139,13 +141,13 @@ export async function POST(request: NextRequest) {
     const { data: newFeature, error: createError } = await supabase
       .from('feature_requests')
       .insert({
-        org_id: userData.org_id,
+        org_id: orgId,
         user_id: user.id,
         title,
         description,
         category,
         status: 'submitted'
-      })
+      } as any)
       .select()
       .single()
 
