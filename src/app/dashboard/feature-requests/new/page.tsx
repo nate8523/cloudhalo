@@ -22,9 +22,7 @@ import Link from 'next/link'
 const featureRequestSchema = z.object({
   title: z.string().min(10, 'Title must be at least 10 characters').max(200, 'Title must be less than 200 characters'),
   description: z.string().min(50, 'Description must be at least 50 characters').max(2000, 'Description must be less than 2000 characters'),
-  category: z.enum(['integration', 'analytics', 'alerts', 'ui', 'automation', 'other'], {
-    required_error: 'Please select a category',
-  }),
+  category: z.enum(['integration', 'analytics', 'alerts', 'ui', 'automation', 'other']),
 })
 
 type FeatureRequestFormValues = z.infer<typeof featureRequestSchema>
